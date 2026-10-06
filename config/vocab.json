@@ -1,0 +1,749 @@
+{
+ "technologies": [
+  {
+   "name": "Go",
+   "category": "language",
+   "aliases": [
+    {
+     "pattern": "Golang|(?<![A-Za-z])Go(?=\\s*(?:[,/)]|and\\b|or\\b|programming|language|developer|engineer|services?))|(?<=[,/(])\\s*Go\\b",
+     "regex": true,
+     "case_sensitive": true
+    }
+   ],
+   "match_name": false
+  },
+  {
+   "name": "Java",
+   "category": "language"
+  },
+  {
+   "name": "Kotlin",
+   "category": "language"
+  },
+  {
+   "name": "Python",
+   "category": "language"
+  },
+  {
+   "name": "Rust",
+   "category": "language"
+  },
+  {
+   "name": "Node.js",
+   "category": "language",
+   "aliases": [
+    {
+     "pattern": "node(\\.?js)?\\b|nodejs",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "JavaScript/TypeScript",
+   "category": "language",
+   "aliases": [
+    {
+     "pattern": "java\\s?script|type\\s?script|\\bJS\\b|\\bTS\\b",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "PHP",
+   "category": "language"
+  },
+  {
+   "name": ".NET",
+   "category": "language",
+   "aliases": [
+    {
+     "pattern": "\\.net|dotnet|asp\\.net|c#",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "Spring Boot",
+   "category": "framework",
+   "aliases": [
+    {
+     "pattern": "spring[- ]?boot",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "Spring MVC",
+   "category": "framework"
+  },
+  {
+   "name": "Hibernate",
+   "category": "framework"
+  },
+  {
+   "name": "J2EE",
+   "category": "framework"
+  },
+  {
+   "name": "Quarkus",
+   "category": "framework"
+  },
+  {
+   "name": "Express",
+   "category": "framework",
+   "match_name": false,
+   "aliases": [
+    {
+     "pattern": "express\\.?js|expressjs",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "Ruby on Rails",
+   "category": "framework"
+  },
+  {
+   "name": "React",
+   "category": "framework"
+  },
+  {
+   "name": "Angular",
+   "category": "framework"
+  },
+  {
+   "name": "Vue",
+   "category": "framework"
+  },
+  {
+   "name": "GraphQL",
+   "category": "api"
+  },
+  {
+   "name": "REST APIs",
+   "category": "api",
+   "aliases": [
+    {
+     "pattern": "restful?(\\s+api)?s?|\\bAPIs?\\b",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "gRPC",
+   "category": "api"
+  },
+  {
+   "name": "Apigee",
+   "category": "api"
+  },
+  {
+   "name": "HTML/CSS/Sass",
+   "category": "frontend",
+   "aliases": [
+    {
+     "pattern": "html5?|css3?|sass|scss",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "Freemarker",
+   "category": "frontend"
+  },
+  {
+   "name": "Content Management Systems",
+   "category": "frontend"
+  },
+  {
+   "name": "Mobile",
+   "category": "frontend",
+   "aliases": [
+    {
+     "pattern": "android|\\bios\\b|swift\\b|react native|flutter",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ],
+   "match_name": false
+  },
+  {
+   "name": "SQL",
+   "category": "datastore"
+  },
+  {
+   "name": "RDBMS",
+   "category": "datastore"
+  },
+  {
+   "name": "PostgreSQL",
+   "category": "datastore",
+   "aliases": [
+    {
+     "pattern": "postgres(ql)?",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "MySQL",
+   "category": "datastore"
+  },
+  {
+   "name": "Oracle",
+   "category": "datastore",
+   "name_case_sensitive": true
+  },
+  {
+   "name": "NoSQL",
+   "category": "datastore"
+  },
+  {
+   "name": "MongoDB",
+   "category": "datastore"
+  },
+  {
+   "name": "Cassandra",
+   "category": "datastore"
+  },
+  {
+   "name": "DynamoDB",
+   "category": "datastore"
+  },
+  {
+   "name": "Cosmos DB",
+   "category": "datastore"
+  },
+  {
+   "name": "Redis",
+   "category": "datastore"
+  },
+  {
+   "name": "Valkey",
+   "category": "datastore"
+  },
+  {
+   "name": "Elasticsearch",
+   "category": "datastore"
+  },
+  {
+   "name": "Druid",
+   "category": "datastore",
+   "name_case_sensitive": true
+  },
+  {
+   "name": "ClickHouse",
+   "category": "datastore"
+  },
+  {
+   "name": "Snowflake",
+   "category": "datastore"
+  },
+  {
+   "name": "Vector Databases",
+   "category": "datastore"
+  },
+  {
+   "name": "Data Modeling",
+   "category": "data"
+  },
+  {
+   "name": "Data Pipelines",
+   "category": "data",
+   "aliases": [
+    {
+     "pattern": "etl|elt|data pipelines?",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "Data Lakes & Warehousing",
+   "category": "data"
+  },
+  {
+   "name": "Hadoop",
+   "category": "data"
+  },
+  {
+   "name": "Spark",
+   "category": "data",
+   "name_case_sensitive": true
+  },
+  {
+   "name": "Flink",
+   "category": "data"
+  },
+  {
+   "name": "S3",
+   "category": "data"
+  },
+  {
+   "name": "Kafka",
+   "category": "messaging"
+  },
+  {
+   "name": "Messaging Systems",
+   "category": "messaging",
+   "aliases": [
+    {
+     "pattern": "rabbitmq|activemq|\\bJMS\\b|\\bSQS\\b|\\bSNS\\b|pub/?sub",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "Apache Camel",
+   "category": "messaging"
+  },
+  {
+   "name": "Temporal",
+   "category": "messaging",
+   "name_case_sensitive": true
+  },
+  {
+   "name": "Event-Driven Architecture",
+   "category": "architecture",
+   "aliases": [
+    {
+     "pattern": "event[- ]driven|event sourcing|\\bCQRS\\b",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "Microservices",
+   "category": "architecture"
+  },
+  {
+   "name": "Distributed Systems",
+   "category": "architecture",
+   "aliases": [
+    {
+     "pattern": "distributed (systems?|computing)",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "System Design",
+   "category": "architecture"
+  },
+  {
+   "name": "Multi-Tenancy",
+   "category": "architecture"
+  },
+  {
+   "name": "Resilience Patterns",
+   "category": "architecture",
+   "aliases": [
+    {
+     "pattern": "circuit[- ]break|bulkhead|backpressure|retries|idempoten",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "Concurrency",
+   "category": "architecture"
+  },
+  {
+   "name": "Caching",
+   "category": "architecture"
+  },
+  {
+   "name": "Serverless",
+   "category": "architecture"
+  },
+  {
+   "name": "Cloud Native",
+   "category": "architecture"
+  },
+  {
+   "name": "Payments",
+   "category": "domain",
+   "aliases": [
+    {
+     "pattern": "payment(s| processor| gateway)?|\\bPSP\\b|stripe|adyen",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "A/B Testing",
+   "category": "domain"
+  },
+  {
+   "name": "Machine Learning",
+   "category": "domain"
+  },
+  {
+   "name": "RAG / LLM APIs",
+   "category": "domain",
+   "aliases": [
+    {
+     "pattern": "\\bRAG\\b|\\bLLMs?\\b|openai|anthropic|retrieval[- ]augmented",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "Agentic AI",
+   "category": "domain",
+   "aliases": [
+    {
+     "pattern": "agentic|ai agents?|\\bMCP\\b|model context protocol|function calling",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "AI Coding Tools",
+   "category": "domain"
+  },
+  {
+   "name": "AWS",
+   "category": "cloud",
+   "aliases": [
+    {
+     "pattern": "amazon web services|\\bEC2\\b|\\bLambda\\b",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "Azure",
+   "category": "cloud"
+  },
+  {
+   "name": "GCP",
+   "category": "cloud",
+   "aliases": [
+    {
+     "pattern": "google cloud",
+     "regex": false,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "Kubernetes",
+   "category": "cloud",
+   "aliases": [
+    {
+     "pattern": "k8s|\\bEKS\\b|\\bAKS\\b|\\bGKE\\b",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "Docker",
+   "category": "cloud"
+  },
+  {
+   "name": "OpenShift",
+   "category": "cloud"
+  },
+  {
+   "name": "Terraform",
+   "category": "cloud"
+  },
+  {
+   "name": "Ansible",
+   "category": "cloud"
+  },
+  {
+   "name": "NGINX",
+   "category": "cloud"
+  },
+  {
+   "name": "Linux",
+   "category": "cloud"
+  },
+  {
+   "name": "Observability",
+   "category": "observability",
+   "aliases": [
+    {
+     "pattern": "monitoring|tracing|telemetry|\\bAPM\\b",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "OpenTelemetry",
+   "category": "observability"
+  },
+  {
+   "name": "Datadog",
+   "category": "observability"
+  },
+  {
+   "name": "Splunk",
+   "category": "observability"
+  },
+  {
+   "name": "SIEM",
+   "category": "observability"
+  },
+  {
+   "name": "IAM (OAuth/SAML/Okta)",
+   "category": "security",
+   "aliases": [
+    {
+     "pattern": "oauth\\s?2?|saml|okta|\\bSSO\\b|\\bOIDC\\b|\\bJWT\\b",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "CI/CD",
+   "category": "build",
+   "aliases": [
+    {
+     "pattern": "ci\\s?/\\s?cd|continuous (integration|delivery|deployment)",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "Jenkins",
+   "category": "build"
+  },
+  {
+   "name": "Gradle",
+   "category": "build"
+  },
+  {
+   "name": "Maven",
+   "category": "build"
+  },
+  {
+   "name": "Ant",
+   "category": "build",
+   "match_name": false,
+   "aliases": [
+    {
+     "pattern": "apache ant",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "Azure DevOps",
+   "category": "build"
+  },
+  {
+   "name": "Liquibase",
+   "category": "build"
+  },
+  {
+   "name": "TDD",
+   "category": "testing"
+  },
+  {
+   "name": "JUnit",
+   "category": "testing"
+  },
+  {
+   "name": "Cucumber",
+   "category": "testing"
+  },
+  {
+   "name": "Test Automation",
+   "category": "testing",
+   "aliases": [
+    {
+     "pattern": "automated testing|test automation|selenium|cypress",
+     "regex": true,
+     "case_sensitive": false
+    }
+   ]
+  },
+  {
+   "name": "Testcontainers",
+   "category": "testing"
+  },
+  {
+   "name": "Agile",
+   "category": "practice"
+  }
+ ],
+ "level_rules": [
+  {
+   "regex": "(?i)\\b(intern|trainee)\\b",
+   "level": "Intern",
+   "priority": 10
+  },
+  {
+   "regex": "(?i)\\b(principal|architect|distinguished|fellow)\\b",
+   "level": "Principal",
+   "priority": 20
+  },
+  {
+   "regex": "(?i)\\b(staff|lead|tech lead)\\b",
+   "level": "Staff",
+   "priority": 30
+  },
+  {
+   "regex": "(?i)\\b(senior|sr\\.?|SDE[- ]?3|engineer III|developer III)\\b",
+   "level": "Senior",
+   "priority": 40
+  },
+  {
+   "regex": "(?i)\\b(SDE[- ]?2|engineer II|developer II|software engineer 2)\\b",
+   "level": "Mid",
+   "priority": 50
+  },
+  {
+   "regex": "(?i)\\b(junior|jr\\.?|associate|SDE[- ]?1|engineer I|developer I|graduate|entry[- ]level)\\b",
+   "level": "Junior",
+   "priority": 60
+  },
+  {
+   "regex": "(?i)\\b(software|backend|back[- ]end|full[- ]?stack|java|python|platform|application)\\b.*\\b(engineer|developer)\\b",
+   "level": "Mid",
+   "priority": 90
+  },
+  {
+   "regex": "(?i)\\b(director|head of|vice president|VP)\\b",
+   "level": "Director",
+   "priority": 25
+  },
+  {
+   "regex": "(?i)\\bmanager\\b",
+   "level": "Manager",
+   "priority": 35
+  }
+ ],
+ "cities": {
+  "Bengaluru": [
+   "bengaluru",
+   "bangalore",
+   "bengalooru"
+  ],
+  "Hyderabad": [
+   "hyderabad",
+   "secunderabad"
+  ],
+  "Pune": [
+   "pune"
+  ],
+  "Mumbai": [
+   "mumbai",
+   "bombay"
+  ],
+  "Chennai": [
+   "chennai",
+   "madras"
+  ],
+  "Gurugram": [
+   "gurugram",
+   "gurgaon"
+  ],
+  "Noida": [
+   "noida"
+  ],
+  "Delhi": [
+   "delhi"
+  ],
+  "Kolkata": [
+   "kolkata",
+   "calcutta"
+  ],
+  "Ahmedabad": [
+   "ahmedabad"
+  ],
+  "Gandhinagar": [
+   "gandhinagar"
+  ],
+  "Jaipur": [
+   "jaipur"
+  ],
+  "Chandigarh": [
+   "chandigarh"
+  ],
+  "Mohali": [
+   "mohali"
+  ],
+  "Kochi": [
+   "kochi",
+   "cochin"
+  ],
+  "Thiruvananthapuram": [
+   "thiruvananthapuram",
+   "trivandrum"
+  ],
+  "Coimbatore": [
+   "coimbatore"
+  ],
+  "Indore": [
+   "indore"
+  ],
+  "Nagpur": [
+   "nagpur"
+  ],
+  "Bhubaneswar": [
+   "bhubaneswar"
+  ],
+  "Vadodara": [
+   "vadodara",
+   "baroda"
+  ],
+  "Lucknow": [
+   "lucknow"
+  ],
+  "Visakhapatnam": [
+   "visakhapatnam",
+   "vizag"
+  ],
+  "Mysuru": [
+   "mysuru",
+   "mysore"
+  ],
+  "Surat": [
+   "surat"
+  ],
+  "Faridabad": [
+   "faridabad"
+  ]
+ },
+ "domains": {
+  "Payments": ["payment", "payments", "upi", "checkout", "billing", "acquiring", "settlement", "remittance", "wallet", "payouts"],
+  "Banking & Lending": ["banking", "lending", "loan", "loans", "mortgage", "core banking", "credit cards", "retail banking"],
+  "Capital Markets & Risk": ["trading", "brokerage", "capital markets", "treasury", "fraud", "risk management", "liquidity"],
+  "Security": ["security", "siem", "iam", "zero trust", "cryptography", "encryption", "vulnerability", "threat", "cybersecurity"],
+  "Observability": ["observability", "monitoring", "telemetry", "tracing", "sre", "site reliability", "alerting"],
+  "Data Platform": ["data platform", "data pipeline", "data pipelines", "data engineering", "etl", "data warehouse", "lakehouse", "ingestion", "data lake"],
+  "Machine Learning": ["machine learning", "deep learning", "llm", "genai", "generative ai", "recommendation", "ranking", "nlp", "computer vision"],
+  "Cloud Infrastructure": ["cloud infrastructure", "kubernetes", "virtualization", "hypervisor", "storage systems", "networking", "compute platform"],
+  "Developer Productivity": ["developer productivity", "build system", "ci/cd", "devops", "release engineering", "developer tooling", "test infrastructure"],
+  "E-commerce & Marketplace": ["marketplace", "e-commerce", "ecommerce", "catalog", "fulfillment", "seller", "shopping"],
+  "Search & Ads": ["search", "advertising", "adtech", "ad tech", "ads platform"],
+  "Healthcare": ["healthcare", "clinical", "patient", "pharma", "medical"],
+  "Telecom": ["telecom", "5g", "ran", "network automation", "telco"],
+  "Enterprise Applications": ["erp", "hcm", "supply chain", "procurement", "order management", "oracle fusion"]
+ }
+}

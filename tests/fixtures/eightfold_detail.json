@@ -1,0 +1,121 @@
+{
+ "status": 200,
+ "error": {
+  "message": "",
+  "body": ""
+ },
+ "data": {
+  "id": 274919097057,
+  "displayJobId": "R0136054",
+  "name": "Sr. Software Engineer – Cloud Infrastructure and Devops",
+  "locations": [
+   "Austin, Texas, United States of America",
+   "Scottsdale, Arizona, United States of America",
+   "Chicago, Illinois, United States of America",
+   "San Jose, California, United States of America"
+  ],
+  "standardizedLocations": [
+   "Austin, TX, US",
+   "Scottsdale, AZ, US",
+   "Chicago, IL, US",
+   "San Jose, CA, US"
+  ],
+  "postedTs": 1788307200,
+  "stars": 0,
+  "department": "Software Engineering",
+  "creationTs": 1774569600,
+  "jobDescription": "<p style=\"text-align:left\"><b>The Company</b></p><p style=\"text-align:inherit\"></p><p style=\"text-align:left\">PayPal has been revolutionizing commerce globally for more than 25 years. Creating innovative experiences that make moving money, selling, and shopping simple, personalized, and secure, PayPal empowers consumers and businesses in approximately 200 markets to join and thrive in the global economy. </p><p style=\"text-align:inherit\"></p><p style=\"text-align:left\">We operate a global, two-sided network at scale that connects hundreds of millions of merchants and consumers. We help merchants and consumers connect, transact, and complete payments, whether they are online or in person. PayPal is more than a connection to third-party payment networks. We provide proprietary payment solutions accepted by merchants that enable the completion of payments on our platform on behalf of our customers.</p><p style=\"text-align:inherit\"></p><p style=\"text-align:left\">We offer our customers the flexibility to use their accounts to purchase and receive payments for goods and services, as well as the ability to transfer and withdraw funds. We enable consumers to exchange funds more safely with merchants using a variety of funding sources, which may include a bank account, a PayPal or Venmo account balance, PayPal and Venmo branded credit products, a credit card, a debit card, certain cryptocurrencies, or other stored value products such as gift cards, and eligible credit card rewards.  Our PayPal, Venmo, and Xoom products also make it safer and simpler for friends and family to transfer funds to each other. We offer merchants an end-to-end payments solution that provides authorization and settlement capabilities, as well as instant access to funds and payouts. We also help merchants connect with their customers, process exchanges and returns, and manage risk. We enable consumers to engage in cross-border shopping and merchants to extend their global reach while reducing the complexity and friction involved in enabling cross-border trade. </p><p style=\"text-align:inherit\"></p><p style=\"text-align:left\">Our beliefs are the foundation for how we conduct business every day.  We live each day guided by our core values of Inclusion, Innovation, Collaboration, and Wellness. Together, our values ensure that we work together as one global team with our customers at the center of everything we do – and they push us to ensure we take care of ourselves, each other, and our communities.</p><p style=\"text-align:inherit\"></p><p style=\"text-align:inherit\"></p><p style=\"text-align:left\"><b>Job Summary:</b></p>This job delivers complete solutions spanning all phases of the Software Development Lifecycle (SDLC). It involves advising management on project-level issues, guiding junior engineers, operating with little supervision, and applying knowledge of technical best practices. In this role, you will be a key contributor to Venmo’s chaos engineering and business continuity efforts, building and operating the systems that ensure our infrastructure can withstand and recover from any failure scenario.<p style=\"text-align:inherit\"></p><p style=\"text-align:left\"><b>Job Description:</b></p><p><b>Essential Responsibilities: </b></p><ul><li>Delivers complete solutions spanning all phases of the Software Development Lifecycle (SDLC) (design, implementation, testing, delivery and operations), based on definitions from more senior roles.</li><li>Advises immediate management on project-level issues</li><li>Guides junior engineers</li><li>Operates with little day-to-day supervision, making technical decisions based on knowledge of internal conventions and industry best practices</li><li>Applies knowledge of technical best practices in making decisions</li></ul><p></p><p><b>Minimum Qualifications:</b></p><ul><li>3+ years relevant experience and a Bachelor’s degree OR Any equivalent combination of education and experience.</li></ul><div><div><div><div><div><div><div><div><div><div><div><p style=\"text-align:inherit\"></p><p style=\"text-align:left\"><b>Additional Responsibilities &amp; Preferred Qualifications<span>:</span></b></p></div></div></div></div></div></div></div></div></div></div></div><h2>Engineering at Venmo</h2><p>At Venmo, we are creating a product that people love. We strive to create a delightful user experience while connecting the world and empowering people through payments. We are looking for intellectually curious people who want to be inspired and inspire others to change the world.</p><p>Engineering is a craft, and at Venmo we want the internals of our software to be as elegant as the end user experience we are designing. We spend our days scaling our infrastructure and building new features to meet and exceed our users’ needs and wants. We work with a product team that is data-driven and human-centered in its design principles. We teach and learn from one another and push each other to be at our creative and analytical best.</p><p></p><p><b>Job Description: Cloud/DevOps Engineer – Business Continuity</b></p><p></p><p>Our Business Continuity team is responsible for the resilience and recoverability of Venmo’s critical systems. We design, build, and operate the infrastructure, tooling, and processes that protect the company from disruption; spanning disaster recovery automation, chaos engineering, incident game days, and backup and restore systems. Our work ensures that Venmo can withstand and rapidly recover from any failure scenario, from infrastructure outages to region-wide incidents. We operate at the intersection of cloud engineering, SRE, and reliability, and our work is foundational to the availability of every product and service at Venmo.</p><p></p><p>As a Senior Engineer on the Business Continuity team, you will deliver complete solutions spanning all phases of the SDLC. You are a hands-on contributor that teaches by example and mentors other engineers and product owners on how to improve their development, using our systems, by driving best practices. We have a lot of independence in our decisions, but we are kept accountable for the results.</p><p></p><p>Our technical stack: AWS, EKS, Docker, GitHub Enterprise, Terraform, GitHub Actions, DataDog, Bash, Python, Go.</p><p></p><p><b>What You’ll Do</b></p><ul><li>Act as a hands-on contributor, while leading by example</li><li>Mentor junior engineers</li><li>Enjoy a high degree of independence in decision-making while being accountable for results of yourself and your team</li><li>Be part of a team dedicated to driving the scalability and reliability of Venmo’s AWS cloud infrastructure</li><li>Contribute to initiatives: internal teams rarely have dedicated project managers. You will define the design, identify stakeholders, navigate risks and changes, coordinate colleagues’ work, implement solutions, and be accountable for timely and quality project delivery</li><li>Troubleshoot incidents, identify root causes, fix and document problems, and implement preventive measures</li><li>Lead by example, making meaningful contributions to the improvement of engineering teams’ production operations</li><li>Develop and improve tools and automation to manage infrastructure and application configuration as code</li><li>Enhance the quality, reliability, and stability of our infrastructure and operations</li><li>Design, implement, and operate chaos engineering experiments to proactively identify and remediate system weaknesses</li><li>Build and maintain disaster recovery automation, runbooks, and infrastructure across Venmo’s cloud environment</li><li>Plan and execute chaos and incident game day exercises to validate system resilience and team preparedness</li><li>Develop and maintain backup and restore tooling and processes for critical systems and data</li><li>Define and track resilience metrics, SLOs, and recovery time objectives for owned systems</li></ul><p></p><p><b>What We’re Looking For</b></p><ul><li>Bachelor’s in computer science or related field of study</li><li>5+ years’ experience in software development or a related field</li><li>3+ years’ experience operating distributed applications 24x7x365, as part of a Cloud Engineering, DevOps, and/or SRE team</li><li>Extensive hands-on experience with designing, implementing, and supporting infrastructure (AWS experience preferred) to support global-scale services</li><li>Deep hands-on experience with IaaS and PaaS solutions from AWS (or similar cloud provider)</li><li>Hands-on programming and scripting (Python, Java, Bash, Go)</li><li>Hands-on experience with containers and container orchestration: Docker, Kubernetes</li><li>Strong communication skills with the ability to understand and explain technical issues to a non-technical audience</li><li>Experience with chaos engineering tools and frameworks (e.g., AWS Fault Injection Simulator, Gremlin, Chaos Monkey, Litmus)</li><li>Hands-on experience designing and implementing disaster recovery solutions for distributed systems</li><li>Experience developing and maintaining backup and restore tooling and strategies</li><li>Experience planning and executing game day exercises or incident simulations</li><li>Understanding of RTO/RPO requirements and how to design systems to meet them</li></ul><p style=\"text-align:inherit\"></p><p style=\"text-align:left\"><b>Subsidiary:</b></p>Venmo<p style=\"text-align:inherit\"></p><p style=\"text-align:left\"><b>Travel Percent:</b></p>0<p style=\"text-align:inherit\"></p><p style=\"text-align:inherit\"></p>Visa Sponsorship through PayPal is not available for this position now or any time in the future.<p style=\"text-align:inherit\"></p><p style=\"text-align:inherit\"></p><p style=\"text-align:inherit\">-</p><p style=\"text-align:inherit\"></p><p style=\"text-align:inherit\"></p>The base pay for this role will depend on where you work and the relevant experience and expertise you bring. The expected range of pay for this role by location is:<br><p style=\"text-align:inherit\"></p><p style=\"text-align:left\"><b>Primary Location | Pay Range:</b></p>Austin, Texas: ($130,500.00 - $193,600.00 Annually)<br><br><p style=\"text-align:left !important\"><b>Additional Location(s) | Pay Range:</b></p>Chicago, Illinois: ($130,500.00 - $193,600.00 Annually)<br>San Jose, California: ($143,500.00 - $212,850.00 Annually)<br>Scottsdale, Arizona: ($123,500.00 - $183,700.00 Annually)<br><br>Additional compensation for this role may include an annual performance bonus, equity, or other incentive compensation, as applicable.<p></p><p><span>PayPal does not charge candidates any fees for courses, applications, resume reviews, interviews, background checks, or onboarding. When making an application directly, we will never ask you to share passwords, one-time passcodes (OTP), or verification codes.  Any such request is a red flag and likely part of a scam. All communication regarding your application will come from official PayPal email domains. If you suspect fraudulent activity, please report it immediately.  To learn more about how to identify and avoid recruitment fraud please visit <a href=\"http://careers.pypl.com/contact-us\" target=\"_blank\">https://careers.pypl.com/contact-us</a>. </span></p><p></p><p>For the majority of employees, PayPal's balanced hybrid work model offers 3 days in the office for effective in-person collaboration and 2 days at your choice of either the PayPal office or your home workspace, ensuring that you equally have the benefits and conveniences of both locations.</p><p></p><p><b>Our Benefits:</b></p><p>At PayPal, we’re committed to building an equitable and inclusive global economy. And we can’t do this without our most important asset-you. That’s why we offer comprehensive, choice-based programs, to support all aspects of personal wellbeing—physical, emotional, and financial—delivering meaningful value where it matters most. We strive to create a flexible, balanced work culture with a holistic approach to benefits, including generous paid time off, healthcare coverage for you and your family, and resources to create financial security and support your mental health.</p><p></p><p><b>Who We Are:</b></p><p><a href=\"https://about.pypl.com/who-we-are/default.aspx\" target=\"_blank\"><span>Click Here</span></a><span> to learn more about our culture and community.</span></p><p></p><p><b>Commitment to Diversity and Inclusion  </b></p><p><span>PayPal provides equal employment opportunity (EEO) to all persons regardless of age, color, national origin, citizenship status, physical or mental disability, race, religion, creed, gender, sex, pregnancy, sexual orientation, gender identity and/or expression, genetic information, marital status, status with regard to public assistance, veteran status, or any other characteristic protected by federal, state, or local law.  In addition, PayPal will provide reasonable accommodations for qualified individuals with disabilities.  If you are unable to submit an application because of incompatible assistive technology or a disability, please contact us </span><span>at </span><a href=\"mailto:paypalglobaltalentacquisition@paypal.com\" target=\"_blank\"><span><span><span><span><span><span><span><span><span><span><span><span><span><span><span><span>paypalglobaltalentacquisition@paypal.com</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></a><span>.</span><span> </span></p><p></p><p><b>Belonging at PayPal:</b> </p><p>Our employees are central to advancing our mission, and we strive to create an environment where everyone can do their best work with a sense of purpose and belonging. Belonging at PayPal means creating a workplace with a sense of acceptance and security where all employees feel included and valued. We are proud to have a diverse workforce reflective of the merchants, consumers, and communities that we serve, and we continue to take tangible actions to cultivate inclusivity and belonging at PayPal.</p><p></p><p><span>Any general requests for consideration of your skills, please </span><a href=\"https://nam11.safelinks.protection.outlook.com/?url=https%3A%2F%2Fpaypal.eightfold.ai%2Fcareers%2Fjoin%3Fdomain%3Dpaypal.com&amp;data=05%7C01%7Chmouchel%40paypal.com%7C896c661e48224f2f6c0608db51a99675%7Cfb00791460204374977e21bac5f3f4c8%7C0%7C0%7C638193561037230485%7CUnknown%7CTWFpbGZsb3d8eyJWIjoiMC4wLjAwMDAiLCJQIjoiV2luMzIiLCJBTiI6Ik1haWwiLCJXVCI6Mn0%3D%7C3000%7C%7C%7C&amp;sdata=iYNNAXZqfoYTLGNP79IEWsPoYxBR8lE1%2BqNN6c2Kmnk%3D&amp;reserved=0\" target=\"_blank\">Join our Talent Community</a><span>. </span></p><p></p><p><u>We know the confidence gap and imposter syndrome can get in the way of meeting spectacular candidates. Please don’t hesitate to apply.</u></p><p></p>",
+  "location": "Austin, Texas, United States of America",
+  "isHot": 0,
+  "workLocationOption": "onsite",
+  "locationFlexibility": null,
+  "atsJobId": "R0136054",
+  "positionUrl": "/careers/job/274919097057",
+  "publicUrl": "https://paypal.eightfold.ai/careers/job/274919097057",
+  "efcustomTextJobFunction2": null,
+  "efcustomTextTimeType": [
+   "Full time"
+  ],
+  "efcustomTextTimeTypeEvg": [],
+  "jdHighlight": [],
+  "positionExtraDetails": {
+   "videos": [
+    {
+     "url": "https://www.youtube.com/embed/VyoiQO4VJ0s?si=ohRE9Lle_5gzifk2",
+     "title": "A Peek Inside PayPal’s Two-Sided Network of Consumers and Businesses",
+     "description": "Find out more about what makes PayPal uniquely positioned to help businesses sell and consumers shop with confidence.\n\nLearn more about PayPal’s Two-S..."
+    },
+    {
+     "url": "https://www.youtube.com/embed/NumgKtM7jNY?si=ljmo0cJRnhAm0uTc",
+     "title": "Every Person Has the Right to Participate Fully in the Global Economy",
+     "description": "Our mission at PayPal is to democratize financial services to ensure that everyone, regardless of background or economic standing, has access to affor..."
+    },
+    {
+     "url": "https://www.youtube.com/embed/D8gmmCU44w4?si=ANjkw2p7I1j58O6r",
+     "title": "Day in the Life of a PayPal EMEA Intern",
+     "description": "PayPal EMEA interns share with us a glimpse into their life while interning for our Fall 2022 program.  Building a career at PayPal gives you a chance..."
+    }
+   ],
+   "blogs": [],
+   "perks": [
+    {
+     "title": "Comprehensive Health and Wellness",
+     "description": "Holistic programs to help you and your family stay healthy at every stage of life",
+     "image": null,
+     "imageAlt": null,
+     "icon": "fas fa-heartbeat",
+     "isFavicon": true
+    },
+    {
+     "title": "Financial Security ",
+     "description": "Retirement and investment resources to give you financial security today and in the years ahead",
+     "image": null,
+     "imageAlt": null,
+     "icon": "fa-piggy-bank",
+     "isFavicon": true
+    },
+    {
+     "title": "Time Off and Leaves",
+     "description": "Our time off and leave programs support employees with the time they need to rest and recharge, so they can bring their best to their work and everyday lives.",
+     "image": null,
+     "imageAlt": null,
+     "icon": "fal fa-clock",
+     "isFavicon": true
+    },
+    {
+     "title": "Career and Leadership Training and Development ",
+     "description": "Educational benefits, training and skill-building to help you grow your career ",
+     "image": null,
+     "imageAlt": null,
+     "icon": "fa-laptop",
+     "isFavicon": true
+    },
+    {
+     "title": "Community Involvement ",
+     "description": "Impact the community you call home with company-matched giving, volunteering opportunities and employee experiences",
+     "image": null,
+     "imageAlt": null,
+     "icon": "fal fa-user-friends",
+     "isFavicon": true
+    }
+   ],
+   "pymww": {
+    "people": [],
+    "count": 0
+   },
+   "customContent": [
+    {
+     "body": "<center>When you become part of our Talent Community, we’ll keep you posted about future job opportunities that you may be a match for, as well as career-related events.<br><br><br><a class='nav-btn btn btn-sm header-search-btn' href='https://paypal.eightfold.ai/careers/join?domain=paypal.com'>Join Talent Community</a><br><br><a style='color:#337ab7' href='https://careers.pypl.com/candidate-privacy-statement/'target='_blank' >Candidate Privacy</a><br><br><a style='color:#337ab7' onClick='manageCookiePreferences()' >Cookies</a> </center>",
+     "title": ""
+    }
+   ]
+  },
+  "positionUserActions": {
+   "isSaved": false,
+   "applyAction": {
+    "status": "allowed"
+   }
+  }
+ },
+ "metadata": null
+}

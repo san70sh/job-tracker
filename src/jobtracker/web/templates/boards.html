@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block css %}
+  table.boards { width:100%; border-collapse:collapse; table-layout:fixed; }
+  table.boards th, table.boards td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--line); vertical-align:middle; overflow-wrap:anywhere; }
+  table.boards th { color:var(--muted); font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
+  .c-company { width:17%; font-weight:600; } .c-source { width:25%; } .c-filters { width:20%; } .c-status { width:20%; } .c-act { width:18%; text-align:right; white-space:nowrap; }
+  .c-act button { padding:4px 10px; margin-left:4px; }
+  .src { display:flex; align-items:center; gap:8px; min-width:0; }
+  .src a { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--accent); text-decoration:none; }
+  .src a:hover { text-decoration:underline; }
+  .chips-row { display:flex; flex-wrap:wrap; gap:4px; }
+  .chips-row span { font-size:12px; padding:0 7px; border-radius:6px; background:var(--bg); border:1px solid var(--line); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .chips-row .no { color:var(--bad); } .chips-row .loc { color:var(--accent); }
+  .status-err { color:var(--bad); font-size:13px; } .status-warn { color:var(--warn); font-size:12px; }
+  .newbadge { display:inline-block; min-width:22px; text-align:center; font-size:12px; padding:1px 6px; border-radius:10px; background:var(--bg); border:1px solid var(--line); color:var(--muted); }
+  .newbadge.has { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:8px 12px; margin-bottom:8px; }
+  .form-grid label, .jv-scroll .f label { display:block; font-size:12px; color:var(--muted); margin:8px 0 3px; }
+  .pv { margin-top:10px; font-size:14px; } .pv ul { margin:4px 0 0 18px; padding:0; } .pv .muted { font-size:12px; }
+  .paused { opacity:.6; }
+  @media (max-width:900px) { table.boards { table-layout:auto; } .c-filters { display:none; } }
+{% endblock %}
+{% block main %}
+<h2>Company boards</h2>
+<div class="card" style="margin-bottom:16px">
+  <p class="muted" style="margin-top:0">Paste a board URL or any job URL on it (Greenhouse, Lever, Ashby, SmartRecruiters, Workday, Oracle Cloud, Eightfold, Amazon Jobs, Avature, or a host in config/hosts.json). The first check records what is already open; only later postings pop up.</p>
+  <form id="bf">
+    <div class="form-grid">
+      <div class="f"><label for="b-url">Board address</label><input type="url" id="b-url" placeholder="https://boards.greenhouse.io/stripe" required></div>
+      <div class="f"><label for="b-company">Company name (optional)</label><input type="text" id="b-company" placeholder="Taken from the board when empty"></div>
+      <div class="f"><label for="b-every">Check</label><select id="b-every"></select></div>
+    </div>
+    <div class="form-grid" id="b-fields"></div>
+    <button>Watch board</button> <button type="button" class="ghost" id="b-preview">Preview matches</button>
+    <div class="pv" id="b-pv"></div>
+  </form>
+</div>
+<table class="boards"><thead><tr><th class="c-company">Company</th><th class="c-source">Source</th><th class="c-filters">Filters</th><th class="c-status">Status</th><th class="c-act"></th></tr></thead><tbody id="rows"></tbody></table>
+{% endblock %}
+{% block js %}
+<script>
+// The three filter fields, defined once: the add form and the edit dialog both build them from this list.
+const FILTERS = [["title_include", "Title must match", "e.g. backend, senior"], ["title_exclude", "Title must not match", "e.g. intern"], ["location_include", "Location", "e.g. Pune, Chennai"]];
+// names shown for the fields an edit can change (the filter fields reuse their labels above)
+const FIELD_LABEL = {company: "company", poll_interval_minutes: "check interval", enabled: "active", ...Object.fromEntries(FILTERS.map(([k, l]) => [k, l.toLowerCase()]))};
+let SUG = {}, BOARDS = [];
+
+// ───────── small helpers ─────────
+// A board address can run to 200 characters (Workday adds the whole filter state): show where it is, not all of it.
+function shortUrl(u) {
+  try {
+    const p = new URL(u), path = p.pathname.replace(/\/+$/, "");
+    const s = p.hostname.replace(/^www\./, "") + (path.length > 1 ? path : "");
+    return s.length > 46 ? s.slice(0, 45) + "…" : s;
+  } catch { return u.length > 46 ? u.slice(0, 45) + "…" : u; }
+}
+function ago(iso) {
+  if (!iso) return "never";
+  const m = Math.max(0, Math.round((Date.now() - new Date(iso)) / 60000));
+  if (m < 2) return "just now"; if (m < 90) return m + " min ago";
+  if (m < 2880) return Math.round(m / 60) + " h ago"; return Math.round(m / 1440) + " days ago";
+}
+const minutesLabel = m => (META.poll_intervals.find(i => i.minutes === m) || {label: `Every ${m} min`}).label;
+const intervalOptions = (selected, withDefault) =>
+  (withDefault ? `<option value="">Default (${esc(minutesLabel(META.default_poll_minutes).toLowerCase())})</option>` : "") +
+  META.poll_intervals.map(i => `<option value="${i.minutes}" ${i.minutes === selected ? "selected" : ""}>${esc(i.label)}</option>`).join("");
+
+// builds the three chip fields into `host` and returns a reader for their values
+function filterFields(host, values = {}) {
+  host.innerHTML = FILTERS.map(([k, label]) => `<div class="f"><label>${label}</label><div data-chips="${k}"></div></div>`).join("");
+  const chips = Object.fromEntries(FILTERS.map(([k, , hint]) => [k, Chips.mount(host.querySelector(`[data-chips=${k}]`),
+    {value: values[k] || [], suggestions: SUG[k], placeholder: hint})]));
+  return {chips, read: () => Object.fromEntries(FILTERS.map(([k]) => [k, chips[k].get()]))};
+}
+
+async function showPreview(out, body) {
+  out.innerHTML = '<span class="muted">Checking the board…</span>';
+  try {
+    const r = await api("/api/boards/preview", {method: "POST", body});
+    out.innerHTML = `<b>${r.matched}</b> of ${r.listed} open postings match${r.complete ? "" : " (the board is longer than one check reads)"}.
+      ${r.narrowed_at_source ? '<div class="muted">Places are matched against the office list of the job system itself, so roles in several offices are included.</div>' : ""}
+      ${r.sample.length ? `<ul>${r.sample.map(p => `<li>${esc(p.title)} <span class="muted">${esc(p.location || "")}</span></li>`).join("")}</ul>` : ""}`;
+  } catch (e) { out.innerHTML = `<span class="status-err">${esc(e.message)}</span>`; }
+}
+
+// ───────── the table ─────────
+function filterSummary(b) {
+  const c = [...b.title_include.map(x => `<span title="Title must match ${esc(x)}">+ ${esc(x)}</span>`),
+             ...b.title_exclude.map(x => `<span class="no" title="Title must not match ${esc(x)}">− ${esc(x)}</span>`),
+             ...b.location_include.map(x => `<span class="loc" title="Location ${esc(x)}">@ ${esc(x)}</span>`)];
+  return c.length ? `<div class="chips-row">${c.join("")}</div>` : '<span class="muted">none</span>';
+}
+function statusCell(b) {
+  const stale = b.last_success_at && (Date.now() - new Date(b.last_success_at)) > META.stale_after_hours * 3600e3;
+  const parts = [];
+  if (!b.enabled) parts.push('<span class="pill" data-c="gray">Paused</span>');
+  if (b.last_error) parts.push(`<div class="status-err" title="${esc(b.last_error)}">Failed ${ago(b.last_polled_at)}: ${esc(b.last_error.slice(0, 70))}</div>`);
+  else if (b.last_success_at) {
+    const listed = b.last_listed == null ? "" : `${b.last_listed} listed · `;  // unknown until the first check after the upgrade
+    parts.push(`<span class="newbadge ${b.new_count ? "has" : ""}" title="new postings waiting">${b.new_count}</span> <span class="muted">${listed}${ago(b.last_success_at)}</span>`);
+  }
+  else parts.push('<span class="muted">Not checked yet</span>');
+  if (stale) parts.push(`<div class="status-warn">No good check for ${Math.round((Date.now() - new Date(b.last_success_at)) / 3600e3)} h</div>`);
+  return parts.join(" ");
+}
+window.reload = async function () {
+  await metaReady;
+  BOARDS = await api("/api/boards");
+  $("#rows").innerHTML = BOARDS.map(b => `<tr class="${b.enabled ? "" : "paused"}">
+    <td class="c-company">${esc(b.company)}</td>
+    <td class="c-source"><div class="src"><span class="pill" data-c="${esc(META.ats_colours[b.ats] || "gray")}" style="flex:none">${esc(b.ats)}</span>
+      <a href="${esc(b.board_url)}" target="_blank" rel="noopener" title="${esc(b.board_url)}">${esc(shortUrl(b.board_url))}</a></div></td>
+    <td class="c-filters">${filterSummary(b)}</td>
+    <td class="c-status">${statusCell(b)}</td>
+    <td class="c-act"><button class="ghost" data-edit="${b.id}">Edit</button><button class="ghost" data-check="${b.id}">Check now</button><button class="danger" data-del="${b.id}">Remove</button></td></tr>`).join("")
+    || '<tr><td colspan="5" class="muted">No boards yet.</td></tr>';
+};
+$("#rows").addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.edit) return editBoard(+b.dataset.edit);
+  if (b.dataset.check) {
+    b.disabled = true; b.textContent = "Checking…";
+    try { const r = await api(`/api/boards/${b.dataset.check}/poll`, {method: "POST"}); toast(r.new ? `${r.new} new posting(s)` : "Checked: nothing new"); }
+    catch (err) { toast(esc(err.message), "err"); }
+    return window.reload();
+  }
+  if (b.dataset.del) {
+    const row = BOARDS.find(x => x.id === +b.dataset.del);
+    if (!confirm(`Stop watching ${row.company}? Its pending new postings are removed too.`)) return;
+    await api(`/api/boards/${row.id}`, {method: "DELETE"}); window.reload();
+  }
+});
+
+// ───────── the edit dialog ─────────
+let editor = null, editing = null;
+function editBoard(id) {
+  const b = BOARDS.find(x => x.id === id); if (!b) return;
+  const read = () => ({company: $("#e-company").value.trim(), ...fields.read(), poll_interval_minutes: +$("#e-every").value, enabled: $("#e-on").checked});
+  let fields, initial;
+  editor = editor || Modal({label: "Edit board", beforeClose: () => JSON.stringify(read()) === initial || confirm("Discard your changes?")});
+  editor.body.innerHTML = `<div class="jv modal"><div class="jv-head"><div class="jv-title"><h2>Edit board</h2>
+      <div class="muted">${esc(b.ats)} · ${esc(shortUrl(b.board_url))}</div></div><div class="jv-tools"><button class="ghost jv-x" data-close aria-label="Close">✕</button></div></div>
+    <div class="jv-scroll"><div class="f"><label for="e-company">Company</label><input type="text" id="e-company" value="${esc(b.company)}">
+        ${b.company_jobs ? `<div class="muted">Renaming changes it on ${b.company_jobs} saved job${b.company_jobs === 1 ? "" : "s"} too.</div>` : ""}</div>
+      <div class="form-grid" id="e-fields"></div>
+      <div class="form-grid"><div class="f"><label for="e-every">Check</label><select id="e-every">${intervalOptions(b.poll_interval_minutes, false)}</select></div>
+        <div class="f"><label>&nbsp;</label><label style="display:flex;gap:8px;align-items:center;margin:0;font-size:14px;color:var(--ink)"><input type="checkbox" id="e-on" ${b.enabled ? "checked" : ""}> Active (uncheck to pause)</label></div></div>
+      <button type="button" class="ghost" id="e-preview">Preview matches</button><div class="pv" id="e-pv"></div></div>
+    <div class="jv-foot"><span class="grow"></span><button class="ghost" data-close>Cancel</button><button id="e-save">Save</button></div></div>`;
+  fields = filterFields($("#e-fields", editor.body), b);
+  initial = JSON.stringify(read());
+  editing = id;
+  editor.body.onclick = async e => {
+    if (e.target.closest("[data-close]")) return editor.close();
+    if (e.target.id === "e-preview") return showPreview($("#e-pv"), {board_id: id, ...fields.read()});
+    if (e.target.id !== "e-save") return;
+    try {
+      const r = await api(`/api/boards/${id}`, {method: "PATCH", body: read()});
+      toast(r.changed.length ? `Saved (${r.changed.map(k => FIELD_LABEL[k] || k).join(", ")})` : "Nothing changed");
+      editor.close(true); window.reload();
+    } catch (err) { toast(esc(err.message), "err"); }
+  };
+  editor.open();
+}
+
+// ───────── adding a board ─────────
+function setupAddForm() {
+  $("#b-every").innerHTML = intervalOptions(null, true);
+  const fields = filterFields($("#b-fields"));
+  const body = () => ({url: $("#b-url").value, company: $("#b-company").value || null, ...fields.read(),
+                       poll_interval_minutes: $("#b-every").value ? +$("#b-every").value : null});
+  $("#b-preview").addEventListener("click", () => {
+    if (!$("#b-url").value) return toast("Paste the board address first", "err");
+    const {url, title_include, title_exclude, location_include} = body();
+    showPreview($("#b-pv"), {url, title_include, title_exclude, location_include});
+  });
+  $("#bf").addEventListener("submit", async e => {
+    e.preventDefault();
+    try {
+      const r = await api("/api/boards", {method: "POST", body: body()});
+      if (!r.created) { toast(`Already watching ${esc(r.company)}: opened it for editing`); await window.reload(); return editBoard(r.id); }
+      toast(`Watching ${esc(r.company)} (${esc(r.ats)})`);
+      e.target.reset(); $("#b-pv").innerHTML = ""; setupAddForm(); window.reload();
+    } catch (err) { toast(esc(err.message), "err"); }
+  });
+}
+(async () => {
+  await metaReady;
+  try { SUG = await api("/api/boards/suggestions"); } catch { SUG = {}; }  // no suggestions is fine: the fields take any text
+  setupAddForm();
+  window.reload();
+})();
+</script>
+{% endblock %}

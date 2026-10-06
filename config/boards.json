@@ -1,0 +1,20 @@
+{
+  "_comment": "Options for the Company boards page. poll_intervals: choices in the edit form (the default itself lives in the database column). suggestions: how many options show first, and the word lists behind the title filters.",
+  "poll_intervals": [
+    {"minutes": 60, "label": "Every hour"},
+    {"minutes": 180, "label": "Every 3 hours"},
+    {"minutes": 360, "label": "Every 6 hours"},
+    {"minutes": 1440, "label": "Daily"}
+  ],
+  "stale_after_hours": 24,
+  "ats_colours": {"greenhouse": "green", "lever": "blue", "ashby": "purple", "smartrecruiters": "teal", "workday": "amber", "oracle": "red",
+                  "eightfold": "coral", "amazon": "gray", "jibe": "blue", "avature": "purple", "icims": "gray"},
+  "suggestions": {
+    "count": 5,
+    "more": 20,
+    "max_share": 0.7,
+    "min_titles": 2,
+    "stop_words": ["a", "an", "and", "the", "of", "for", "in", "on", "to", "with", "at", "by", "or", "as", "i", "ii", "iii", "iv", "sr", "jr", "new"],
+    "exclude_candidates": ["intern", "director", "manager", "principal", "associate", "vp", "head", "analyst", "consultant", "architect", "sales", "recruiter", "support", "qa"]
+  }
+}

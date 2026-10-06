@@ -1,0 +1,1419 @@
+{
+ "status": 200,
+ "error": {
+  "message": "",
+  "body": ""
+ },
+ "data": {
+  "positions": [
+   {
+    "id": 274919097057,
+    "displayJobId": "R0136054",
+    "name": "Sr. Software Engineer – Cloud Infrastructure and Devops",
+    "locations": [
+     "Austin, Texas, United States of America",
+     "Scottsdale, Arizona, United States of America",
+     "Chicago, Illinois, United States of America",
+     "San Jose, California, United States of America"
+    ],
+    "standardizedLocations": [
+     "Austin, TX, US",
+     "Scottsdale, AZ, US",
+     "Chicago, IL, US",
+     "San Jose, CA, US"
+    ],
+    "postedTs": 1788307200,
+    "solrScore": null,
+    "stars": 0,
+    "department": "Software Engineering",
+    "creationTs": 1774569600,
+    "isHot": 0,
+    "workLocationOption": "onsite",
+    "locationFlexibility": null,
+    "atsJobId": "R0136054",
+    "positionUrl": "/careers/job/274919097057"
+   },
+   {
+    "id": 274920235123,
+    "displayJobId": "R0136773",
+    "name": "Sr. Software Engineer- Cloud Infrastructure and DevOps",
+    "locations": [
+     "San Jose, California, United States of America",
+     "Scottsdale, Arizona, United States of America",
+     "Austin, Texas, United States of America"
+    ],
+    "standardizedLocations": [
+     "San Jose, CA, US",
+     "Scottsdale, AZ, US",
+     "Austin, TX, US"
+    ],
+    "postedTs": 1788307200,
+    "solrScore": null,
+    "stars": 0,
+    "department": "Software Engineering",
+    "creationTs": 1778716800,
+    "isHot": 0,
+    "workLocationOption": "onsite",
+    "locationFlexibility": null,
+    "atsJobId": "R0136773",
+    "positionUrl": "/careers/job/274920235123"
+   },
+   {
+    "id": 274922421731,
+    "displayJobId": "R0137876",
+    "name": "Software Engineer",
+    "locations": [
+     "Central Singapore, Singapore"
+    ],
+    "standardizedLocations": [
+     "Singapore, SG"
+    ],
+    "postedTs": 1789516800,
+    "solrScore": null,
+    "stars": 0,
+    "department": "Software Engineering",
+    "creationTs": 1789430400,
+    "isHot": 0,
+    "workLocationOption": "hybrid",
+    "locationFlexibility": null,
+    "atsJobId": "R0137876",
+    "positionUrl": "/careers/job/274922421731"
+   },
+   {
+    "id": 274922547411,
+    "displayJobId": "R0138185",
+    "name": "Sr Manager, Software Engineering",
+    "locations": [
+     "San Jose, California, United States of America",
+     "Austin, Texas, United States of America"
+    ],
+    "standardizedLocations": [
+     "San Jose, CA, US",
+     "Austin, TX, US"
+    ],
+    "postedTs": 1790294400,
+    "solrScore": null,
+    "stars": 0,
+    "department": "Software Engineering",
+    "creationTs": 1789603200,
+    "isHot": 0,
+    "workLocationOption": "onsite",
+    "locationFlexibility": null,
+    "atsJobId": "R0138185",
+    "positionUrl": "/careers/job/274922547411"
+   },
+   {
+    "id": 274916605923,
+    "displayJobId": "R0132679",
+    "name": "Staff Software Engineer - Backend Python",
+    "locations": [
+     "San Jose, California, United States of America"
+    ],
+    "standardizedLocations": [
+     "San Jose, CA, US"
+    ],
+    "postedTs": 1788307200,
+    "solrScore": null,
+    "stars": 0,
+    "department": "Software Engineering",
+    "creationTs": 1761523200,
+    "isHot": 0,
+    "workLocationOption": "onsite",
+    "locationFlexibility": null,
+    "atsJobId": "R0132679",
+    "positionUrl": "/careers/job/274916605923"
+   },
+   {
+    "id": 274916876257,
+    "displayJobId": "R0133420",
+    "name": "Staff Software Engineer",
+    "locations": [
+     "San Jose, California, United States of America",
+     "Austin, Texas, United States of America"
+    ],
+    "standardizedLocations": [
+     "San Jose, CA, US",
+     "Austin, TX, US"
+    ],
+    "postedTs": 1788307200,
+    "solrScore": null,
+    "stars": 0,
+    "department": "Software Engineering",
+    "creationTs": 1763596800,
+    "isHot": 0,
+    "workLocationOption": "onsite",
+    "locationFlexibility": null,
+    "atsJobId": "R0133420",
+    "positionUrl": "/careers/job/274916876257"
+   },
+   {
+    "id": 274917452620,
+    "displayJobId": "R0134048",
+    "name": "Staff Software Engineer - Cloud Infrastructure and Devops",
+    "locations": [
+     "San Jose, California, United States of America",
+     "Scottsdale, Arizona, United States of America",
+     "Austin, Texas, United States of America"
+    ],
+    "standardizedLocations": [
+     "San Jose, CA, US",
+     "Scottsdale, AZ, US",
+     "Austin, TX, US"
+    ],
+    "postedTs": 1789516800,
+    "solrScore": null,
+    "stars": 0,
+    "department": "Software Engineering",
+    "creationTs": 1766448000,
+    "isHot": 0,
+    "workLocationOption": "hybrid",
+    "locationFlexibility": null,
+    "atsJobId": "R0134048",
+    "positionUrl": "/careers/job/274917452620"
+   },
+   {
+    "id": 274917627749,
+    "displayJobId": "R0134448",
+    "name": "Senior Software Engineer - Python",
+    "locations": [
+     "San Jose, California, United States of America",
+     "Austin, Texas, United States of America"
+    ],
+    "standardizedLocations": [
+     "San Jose, CA, US",
+     "Austin, TX, US"
+    ],
+    "postedTs": 1788998400,
+    "solrScore": null,
+    "stars": 0,
+    "department": "Software Engineering",
+    "creationTs": 1768348800,
+    "isHot": 0,
+    "workLocationOption": "onsite",
+    "locationFlexibility": null,
+    "atsJobId": "R0134448",
+    "positionUrl": "/careers/job/274917627749"
+   },
+   {
+    "id": 274917627800,
+    "displayJobId": "R0134436",
+    "name": "Staff Software Engineer - BE Python",
+    "locations": [
+     "San Jose, California, United States of America",
+     "Austin, Texas, United States of America"
+    ],
+    "standardizedLocations": [
+     "San Jose, CA, US",
+     "Austin, TX, US"
+    ],
+    "postedTs": 1789084800,
+    "solrScore": null,
+    "stars": 0,
+    "department": "Software Engineering",
+    "creationTs": 1768348800,
+    "isHot": 0,
+    "workLocationOption": "onsite",
+    "locationFlexibility": null,
+    "atsJobId": "R0134436",
+    "positionUrl": "/careers/job/274917627800"
+   },
+   {
+    "id": 274917627868,
+    "displayJobId": "R0134362",
+    "name": "Sr Software Engineer, Android",
+    "locations": [
+     "San Jose, California, United States of America",
+     "Austin, Texas, United States of America"
+    ],
+    "standardizedLocations": [
+     "San Jose, CA, US",
+     "Austin, TX, US"
+    ],
+    "postedTs": 1788307200,
+    "solrScore": null,
+    "stars": 0,
+    "department": "Software Engineering",
+    "creationTs": 1768262400,
+    "isHot": 0,
+    "workLocationOption": "onsite",
+    "locationFlexibility": null,
+    "atsJobId": "R0134362",
+    "positionUrl": "/careers/job/274917627868"
+   }
+  ],
+  "filterDef": {
+   "facets": {
+    "locations": [
+     [
+      "Remote",
+      999999
+     ],
+     [
+      "Current Location",
+      999998
+     ],
+     [
+      "San Jose, CA, United States",
+      92
+     ],
+     [
+      "Austin, TX, United States",
+      75
+     ],
+     [
+      "New York, NY, United States",
+      71
+     ],
+     [
+      "Chicago, IL, United States",
+      67
+     ],
+     [
+      "Scottsdale, AZ, United States",
+      47
+     ],
+     [
+      "Omaha, NE, United States",
+      33
+     ],
+     [
+      "England, United Kingdom",
+      29
+     ],
+     [
+      "Singapore",
+      16
+     ],
+     [
+      "Bengaluru, KA, India",
+      9
+     ],
+     [
+      "Berlin, BE, Germany",
+      9
+     ]
+    ]
+   },
+   "smartFilters": [],
+   "allFilters": [
+    {
+     "type": "multi_select",
+     "filterName": "employment_type",
+     "title": "Employment Type",
+     "options": [
+      {
+       "label": "Full Time",
+       "value": "full time"
+      }
+     ],
+     "tooltip": null,
+     "extraData": {},
+     "displayCount": 10,
+     "translateOptions": false,
+     "allowFreeText": false
+    },
+    {
+     "type": "multi_select_facet_search",
+     "filterName": "skills",
+     "title": "Skills",
+     "options": [
+      {
+       "label": "Teamwork",
+       "value": "Teamwork"
+      },
+      {
+       "label": "Cross Functional Skills",
+       "value": "Cross Functional Skills"
+      },
+      {
+       "label": "Revenue Management",
+       "value": "Revenue Management"
+      },
+      {
+       "label": "Collaboration",
+       "value": "Collaboration"
+      },
+      {
+       "label": "Alignment",
+       "value": "Alignment"
+      },
+      {
+       "label": "Payments",
+       "value": "Payments"
+      },
+      {
+       "label": "Onboarding",
+       "value": "Onboarding"
+      },
+      {
+       "label": "Communication",
+       "value": "Communication"
+      },
+      {
+       "label": "Business Development",
+       "value": "Business Development"
+      },
+      {
+       "label": "Reporting",
+       "value": "Reporting"
+      },
+      {
+       "label": "Artificial Intelligence",
+       "value": "Artificial Intelligence"
+      },
+      {
+       "label": "Customer Relationship Management",
+       "value": "Customer Relationship Management"
+      },
+      {
+       "label": "Upselling",
+       "value": "Upselling"
+      },
+      {
+       "label": "Finance",
+       "value": "Finance"
+      },
+      {
+       "label": "Operations",
+       "value": "Operations"
+      },
+      {
+       "label": "Leadership",
+       "value": "Leadership"
+      },
+      {
+       "label": "Account Management",
+       "value": "Account Management"
+      },
+      {
+       "label": "Salesforce",
+       "value": "Salesforce"
+      },
+      {
+       "label": "E-commerce",
+       "value": "E-commerce"
+      },
+      {
+       "label": "Fintech",
+       "value": "Fintech"
+      },
+      {
+       "label": "Financial Analysis",
+       "value": "Financial Analysis"
+      },
+      {
+       "label": "Innovation",
+       "value": "Innovation"
+      },
+      {
+       "label": "Process Improvement",
+       "value": "Process Improvement"
+      },
+      {
+       "label": "Sales",
+       "value": "Sales"
+      },
+      {
+       "label": "Negotiation",
+       "value": "Negotiation"
+      },
+      {
+       "label": "Analytics",
+       "value": "Analytics"
+      },
+      {
+       "label": "Python",
+       "value": "Python"
+      },
+      {
+       "label": "Budgeting",
+       "value": "Budgeting"
+      },
+      {
+       "label": "Partnership Management",
+       "value": "Partnership Management"
+      },
+      {
+       "label": "Customer Experience",
+       "value": "Customer Experience"
+      },
+      {
+       "label": "Go to Market Strategy",
+       "value": "Go to Market Strategy"
+      },
+      {
+       "label": "Data Driven Framework",
+       "value": "Data Driven Framework"
+      },
+      {
+       "label": "Workflow",
+       "value": "Workflow"
+      },
+      {
+       "label": "B2B",
+       "value": "B2B"
+      },
+      {
+       "label": "Financial Services",
+       "value": "Financial Services"
+      },
+      {
+       "label": "Compliance",
+       "value": "Compliance"
+      },
+      {
+       "label": "Prospecting",
+       "value": "Prospecting"
+      },
+      {
+       "label": "Risk Management",
+       "value": "Risk Management"
+      },
+      {
+       "label": "Strategy",
+       "value": "Strategy"
+      },
+      {
+       "label": "Transformation",
+       "value": "Transformation"
+      },
+      {
+       "label": "Accounting",
+       "value": "Accounting"
+      },
+      {
+       "label": "Deployments",
+       "value": "Deployments"
+      },
+      {
+       "label": "Product Strategy",
+       "value": "Product Strategy"
+      },
+      {
+       "label": "Product Management",
+       "value": "Product Management"
+      },
+      {
+       "label": "Records Tracking",
+       "value": "Records Tracking"
+      },
+      {
+       "label": "Strategic Partnerships",
+       "value": "Strategic Partnerships"
+      },
+      {
+       "label": "Language Skills",
+       "value": "Language Skills"
+      },
+      {
+       "label": "Project Management",
+       "value": "Project Management"
+      },
+      {
+       "label": "Standardization",
+       "value": "Standardization"
+      },
+      {
+       "label": "User Experience",
+       "value": "User Experience"
+      },
+      {
+       "label": "Regulatory Compliance",
+       "value": "Regulatory Compliance"
+      },
+      {
+       "label": "Strategic Planning",
+       "value": "Strategic Planning"
+      },
+      {
+       "label": "Implementation",
+       "value": "Implementation"
+      },
+      {
+       "label": "Pricing",
+       "value": "Pricing"
+      },
+      {
+       "label": "Marketing",
+       "value": "Marketing"
+      },
+      {
+       "label": "Kubernetes",
+       "value": "Kubernetes"
+      },
+      {
+       "label": "Software as a Service",
+       "value": "Software as a Service"
+      },
+      {
+       "label": "Support",
+       "value": "Support"
+      },
+      {
+       "label": "Cross-Functional Collaborations",
+       "value": "Cross-Functional Collaborations"
+      },
+      {
+       "label": "Data Analysis",
+       "value": "Data Analysis"
+      },
+      {
+       "label": "Legal",
+       "value": "Legal"
+      },
+      {
+       "label": "Auditing",
+       "value": "Auditing"
+      },
+      {
+       "label": "Docker",
+       "value": "Docker"
+      },
+      {
+       "label": "Business Operations",
+       "value": "Business Operations"
+      },
+      {
+       "label": "Customer Success",
+       "value": "Customer Success"
+      },
+      {
+       "label": "Prioritization",
+       "value": "Prioritization"
+      },
+      {
+       "label": "Product Development",
+       "value": "Product Development"
+      },
+      {
+       "label": "SQL",
+       "value": "SQL"
+      },
+      {
+       "label": "Scaling",
+       "value": "Scaling"
+      },
+      {
+       "label": "Terraform",
+       "value": "Terraform"
+      },
+      {
+       "label": "Closing",
+       "value": "Closing"
+      },
+      {
+       "label": "Coaching",
+       "value": "Coaching"
+      },
+      {
+       "label": "Coding",
+       "value": "Coding"
+      },
+      {
+       "label": "Enterprise Accounts",
+       "value": "Enterprise Accounts"
+      },
+      {
+       "label": "Face to Face Selling",
+       "value": "Face to Face Selling"
+      },
+      {
+       "label": "Healthcare",
+       "value": "Healthcare"
+      },
+      {
+       "label": "Microservices",
+       "value": "Microservices"
+      },
+      {
+       "label": "Security",
+       "value": "Security"
+      },
+      {
+       "label": "API",
+       "value": "API"
+      },
+      {
+       "label": "AWS",
+       "value": "AWS"
+      },
+      {
+       "label": "Campaign Management",
+       "value": "Campaign Management"
+      },
+      {
+       "label": "Efficiency",
+       "value": "Efficiency"
+      },
+      {
+       "label": "Microsoft Excel",
+       "value": "Microsoft Excel"
+      },
+      {
+       "label": "Planning",
+       "value": "Planning"
+      },
+      {
+       "label": "Amazon Web Services (AWS)",
+       "value": "Amazon Web Services (AWS)"
+      },
+      {
+       "label": "Business Strategy",
+       "value": "Business Strategy"
+      },
+      {
+       "label": "Git",
+       "value": "Git"
+      },
+      {
+       "label": "GitHub",
+       "value": "GitHub"
+      },
+      {
+       "label": "Interviewing",
+       "value": "Interviewing"
+      },
+      {
+       "label": "Jenkins",
+       "value": "Jenkins"
+      },
+      {
+       "label": "Law",
+       "value": "Law"
+      },
+      {
+       "label": "Market Research",
+       "value": "Market Research"
+      },
+      {
+       "label": "Relationship Building",
+       "value": "Relationship Building"
+      },
+      {
+       "label": "Strategic Account Management",
+       "value": "Strategic Account Management"
+      },
+      {
+       "label": "Experimentation",
+       "value": "Experimentation"
+      },
+      {
+       "label": "Infrastructure",
+       "value": "Infrastructure"
+      },
+      {
+       "label": "Legal Advice",
+       "value": "Legal Advice"
+      },
+      {
+       "label": "Migration",
+       "value": "Migration"
+      },
+      {
+       "label": "Presentation Skills",
+       "value": "Presentation Skills"
+      },
+      {
+       "label": "SAP",
+       "value": "SAP"
+      },
+      {
+       "label": "Sales Cycle",
+       "value": "Sales Cycle"
+      },
+      {
+       "label": "Tableau",
+       "value": "Tableau"
+      },
+      {
+       "label": "Algorithms",
+       "value": "Algorithms"
+      },
+      {
+       "label": "Computer Science",
+       "value": "Computer Science"
+      },
+      {
+       "label": "DevOps",
+       "value": "DevOps"
+      },
+      {
+       "label": "Django",
+       "value": "Django"
+      },
+      {
+       "label": "GCP",
+       "value": "GCP"
+      },
+      {
+       "label": "Java",
+       "value": "Java"
+      },
+      {
+       "label": "Microsoft Access",
+       "value": "Microsoft Access"
+      },
+      {
+       "label": "Product Roadmaps",
+       "value": "Product Roadmaps"
+      },
+      {
+       "label": "Reconciliation",
+       "value": "Reconciliation"
+      },
+      {
+       "label": "Remediation",
+       "value": "Remediation"
+      },
+      {
+       "label": "Sales Targets",
+       "value": "Sales Targets"
+      },
+      {
+       "label": "Analysis",
+       "value": "Analysis"
+      },
+      {
+       "label": "Architecture",
+       "value": "Architecture"
+      },
+      {
+       "label": "Automation",
+       "value": "Automation"
+      },
+      {
+       "label": "Banking",
+       "value": "Banking"
+      },
+      {
+       "label": "Change Management",
+       "value": "Change Management"
+      },
+      {
+       "label": "Cybersecurity",
+       "value": "Cybersecurity"
+      },
+      {
+       "label": "Documentation",
+       "value": "Documentation"
+      },
+      {
+       "label": "Engineering",
+       "value": "Engineering"
+      },
+      {
+       "label": "GraphQL",
+       "value": "GraphQL"
+      },
+      {
+       "label": "Merchant Services",
+       "value": "Merchant Services"
+      },
+      {
+       "label": "Operational Efficiency",
+       "value": "Operational Efficiency"
+      },
+      {
+       "label": "Risk Assessment",
+       "value": "Risk Assessment"
+      },
+      {
+       "label": "Scrum",
+       "value": "Scrum"
+      },
+      {
+       "label": "Application Security",
+       "value": "Application Security"
+      },
+      {
+       "label": "Business Process",
+       "value": "Business Process"
+      },
+      {
+       "label": "Continuous Integration",
+       "value": "Continuous Integration"
+      },
+      {
+       "label": "Dashboard Software",
+       "value": "Dashboard Software"
+      },
+      {
+       "label": "Dataset",
+       "value": "Dataset"
+      },
+      {
+       "label": "Design",
+       "value": "Design"
+      },
+      {
+       "label": "Financial Reporting",
+       "value": "Financial Reporting"
+      },
+      {
+       "label": "Grafana",
+       "value": "Grafana"
+      },
+      {
+       "label": "Human Resources",
+       "value": "Human Resources"
+      },
+      {
+       "label": "OWASP",
+       "value": "OWASP"
+      },
+      {
+       "label": "ROI Analysis",
+       "value": "ROI Analysis"
+      },
+      {
+       "label": "Redis",
+       "value": "Redis"
+      },
+      {
+       "label": "Scalability",
+       "value": "Scalability"
+      },
+      {
+       "label": "Scripting",
+       "value": "Scripting"
+      },
+      {
+       "label": "Advertising",
+       "value": "Advertising"
+      },
+      {
+       "label": "Ansible",
+       "value": "Ansible"
+      },
+      {
+       "label": "Contract Negotiation",
+       "value": "Contract Negotiation"
+      },
+      {
+       "label": "Cross Selling",
+       "value": "Cross Selling"
+      },
+      {
+       "label": "Customer Service",
+       "value": "Customer Service"
+      },
+      {
+       "label": "Decision Making",
+       "value": "Decision Making"
+      },
+      {
+       "label": "Digital Marketing",
+       "value": "Digital Marketing"
+      },
+      {
+       "label": "Google Cloud Platform",
+       "value": "Google Cloud Platform"
+      },
+      {
+       "label": "Hiring",
+       "value": "Hiring"
+      },
+      {
+       "label": "Internal Controls",
+       "value": "Internal Controls"
+      },
+      {
+       "label": "JavaScript",
+       "value": "JavaScript"
+      },
+      {
+       "label": "Jira",
+       "value": "Jira"
+      },
+      {
+       "label": "Logistics",
+       "value": "Logistics"
+      },
+      {
+       "label": "Machine Learning",
+       "value": "Machine Learning"
+      },
+      {
+       "label": "MySQL",
+       "value": "MySQL"
+      },
+      {
+       "label": "Optimization Software",
+       "value": "Optimization Software"
+      },
+      {
+       "label": "Performance Management",
+       "value": "Performance Management"
+      },
+      {
+       "label": "Portfolio Management",
+       "value": "Portfolio Management"
+      },
+      {
+       "label": "PostgreSQL",
+       "value": "PostgreSQL"
+      },
+      {
+       "label": "Program Management",
+       "value": "Program Management"
+      },
+      {
+       "label": "Prometheus",
+       "value": "Prometheus"
+      },
+      {
+       "label": "REST API",
+       "value": "REST API"
+      },
+      {
+       "label": "Sales Strategy",
+       "value": "Sales Strategy"
+      },
+      {
+       "label": "Stakeholder Management",
+       "value": "Stakeholder Management"
+      },
+      {
+       "label": "Agile",
+       "value": "Agile"
+      },
+      {
+       "label": "Bash",
+       "value": "Bash"
+      },
+      {
+       "label": "Churn Prevention",
+       "value": "Churn Prevention"
+      },
+      {
+       "label": "Cross-selling",
+       "value": "Cross-selling"
+      },
+      {
+       "label": "Customer Retention",
+       "value": "Customer Retention"
+      },
+      {
+       "label": "Data Science",
+       "value": "Data Science"
+      },
+      {
+       "label": "ETL",
+       "value": "ETL"
+      },
+      {
+       "label": "Financial Statements",
+       "value": "Financial Statements"
+      },
+      {
+       "label": "Flask",
+       "value": "Flask"
+      },
+      {
+       "label": "GAAP",
+       "value": "GAAP"
+      },
+      {
+       "label": "Information Security",
+       "value": "Information Security"
+      },
+      {
+       "label": "Investments",
+       "value": "Investments"
+      },
+      {
+       "label": "Marketing Strategy",
+       "value": "Marketing Strategy"
+      },
+      {
+       "label": "Microsoft Power BI",
+       "value": "Microsoft Power BI"
+      },
+      {
+       "label": "Node.js",
+       "value": "Node.js"
+      },
+      {
+       "label": "Pandas",
+       "value": "Pandas"
+      },
+      {
+       "label": "Pipeline Management",
+       "value": "Pipeline Management"
+      },
+      {
+       "label": "Product Marketing",
+       "value": "Product Marketing"
+      },
+      {
+       "label": "Recruiting",
+       "value": "Recruiting"
+      },
+      {
+       "label": "Retail",
+       "value": "Retail"
+      },
+      {
+       "label": "Revenue Growth",
+       "value": "Revenue Growth"
+      },
+      {
+       "label": "SMB",
+       "value": "SMB"
+      },
+      {
+       "label": "Sales Development",
+       "value": "Sales Development"
+      },
+      {
+       "label": "Sales Forecasting",
+       "value": "Sales Forecasting"
+      },
+      {
+       "label": "Sales Operations",
+       "value": "Sales Operations"
+      },
+      {
+       "label": "Software Development",
+       "value": "Software Development"
+      },
+      {
+       "label": "Software Engineering",
+       "value": "Software Engineering"
+      },
+      {
+       "label": "Spanish Language",
+       "value": "Spanish Language"
+      },
+      {
+       "label": "Splunk",
+       "value": "Splunk"
+      },
+      {
+       "label": "Stakeholder Engagement",
+       "value": "Stakeholder Engagement"
+      },
+      {
+       "label": "Training",
+       "value": "Training"
+      },
+      {
+       "label": "scikit-learn",
+       "value": "scikit-learn"
+      },
+      {
+       "label": "Account Expansion",
+       "value": "Account Expansion"
+      },
+      {
+       "label": "Account Planning",
+       "value": "Account Planning"
+      },
+      {
+       "label": "Authentication",
+       "value": "Authentication"
+      },
+      {
+       "label": "Budget Management",
+       "value": "Budget Management"
+      }
+     ],
+     "tooltip": null,
+     "extraData": {},
+     "displayCount": 10,
+     "translateOptions": false,
+     "allowFreeText": false
+    },
+    {
+     "type": "multi_select",
+     "filterName": "brand",
+     "title": "Brand",
+     "options": [
+      {
+       "label": "PayPal",
+       "value": "paypal"
+      },
+      {
+       "label": "Venmo",
+       "value": "venmo"
+      },
+      {
+       "label": "paidy",
+       "value": "paidy"
+      }
+     ],
+     "tooltip": null,
+     "extraData": {},
+     "displayCount": 10,
+     "translateOptions": false,
+     "allowFreeText": false
+    },
+    {
+     "type": "multi_select",
+     "filterName": "work_location_option",
+     "title": "Workplace Type",
+     "options": [
+      {
+       "label": "On-site",
+       "value": "onsite"
+      },
+      {
+       "label": "hybrid",
+       "value": "hybrid"
+      },
+      {
+       "label": "Virtual",
+       "value": "remote_local"
+      }
+     ],
+     "tooltip": null,
+     "extraData": {},
+     "displayCount": 10,
+     "translateOptions": false,
+     "allowFreeText": false
+    },
+    {
+     "type": "multi_select_facet_search",
+     "filterName": "job_category",
+     "title": "Job Category",
+     "options": [
+      {
+       "label": "Large Enterprise Commercial",
+       "value": "Large Enterprise Commercial"
+      },
+      {
+       "label": "Software Engineering",
+       "value": "Software Engineering"
+      },
+      {
+       "label": "Small & Medium Business",
+       "value": "Small & Medium Business"
+      },
+      {
+       "label": "Product Management",
+       "value": "Product Management"
+      },
+      {
+       "label": "Cybersecurity Engineering",
+       "value": "Cybersecurity Engineering"
+      },
+      {
+       "label": "Legal Counsel",
+       "value": "Legal Counsel"
+      },
+      {
+       "label": "Business Operations",
+       "value": "Business Operations"
+      },
+      {
+       "label": "Sales Support",
+       "value": "Sales Support"
+      },
+      {
+       "label": "Data Science",
+       "value": "Data Science"
+      },
+      {
+       "label": "Marketing",
+       "value": "Marketing"
+      },
+      {
+       "label": "Product Growth",
+       "value": "Product Growth"
+      },
+      {
+       "label": "Product Sales",
+       "value": "Product Sales"
+      },
+      {
+       "label": "Sales Development",
+       "value": "Sales Development"
+      },
+      {
+       "label": "Accounting",
+       "value": "Accounting"
+      },
+      {
+       "label": "Ad Sales",
+       "value": "Ad Sales"
+      },
+      {
+       "label": "Treasury",
+       "value": "Treasury"
+      },
+      {
+       "label": "Cybersecurity Risk",
+       "value": "Cybersecurity Risk"
+      },
+      {
+       "label": "Cybersecurity Threat Analysis",
+       "value": "Cybersecurity Threat Analysis"
+      },
+      {
+       "label": "Financial Planning & Analysis",
+       "value": "Financial Planning & Analysis"
+      },
+      {
+       "label": "Partnerships",
+       "value": "Partnerships"
+      },
+      {
+       "label": "Audit",
+       "value": "Audit"
+      },
+      {
+       "label": "Business Process",
+       "value": "Business Process"
+      },
+      {
+       "label": "Corporate Strategy",
+       "value": "Corporate Strategy"
+      },
+      {
+       "label": "Enterprise Servicing",
+       "value": "Enterprise Servicing"
+      },
+      {
+       "label": "Executive Assistant",
+       "value": "Executive Assistant"
+      },
+      {
+       "label": "Program Management",
+       "value": "Program Management"
+      },
+      {
+       "label": "Risk Management",
+       "value": "Risk Management"
+      },
+      {
+       "label": "Tax",
+       "value": "Tax"
+      },
+      {
+       "label": "Database Engineering",
+       "value": "Database Engineering"
+      },
+      {
+       "label": "Global Strategic Accounts",
+       "value": "Global Strategic Accounts"
+      },
+      {
+       "label": "Marketing Planning & Operations",
+       "value": "Marketing Planning & Operations"
+      },
+      {
+       "label": "Performance Marketing",
+       "value": "Performance Marketing"
+      },
+      {
+       "label": "Product Marketing",
+       "value": "Product Marketing"
+      },
+      {
+       "label": "Risk Operations",
+       "value": "Risk Operations"
+      },
+      {
+       "label": "Technical Program Management",
+       "value": "Technical Program Management"
+      },
+      {
+       "label": "Aviation",
+       "value": "Aviation"
+      },
+      {
+       "label": "Benefits",
+       "value": "Benefits"
+      },
+      {
+       "label": "Collections",
+       "value": "Collections"
+      },
+      {
+       "label": "Compensation",
+       "value": "Compensation"
+      },
+      {
+       "label": "Compliance",
+       "value": "Compliance"
+      },
+      {
+       "label": "Corporate Development",
+       "value": "Corporate Development"
+      },
+      {
+       "label": "Data Analytics",
+       "value": "Data Analytics"
+      },
+      {
+       "label": "Enterprise Systems",
+       "value": "Enterprise Systems"
+      },
+      {
+       "label": "Executive Management",
+       "value": "Executive Management"
+      },
+      {
+       "label": "Experience Design",
+       "value": "Experience Design"
+      },
+      {
+       "label": "Experience Research",
+       "value": "Experience Research"
+      },
+      {
+       "label": "Facilities",
+       "value": "Facilities"
+      },
+      {
+       "label": "Global Mobility & Immigration",
+       "value": "Global Mobility & Immigration"
+      },
+      {
+       "label": "Internal Controls",
+       "value": "Internal Controls"
+      },
+      {
+       "label": "Machine Learning Engineering",
+       "value": "Machine Learning Engineering"
+      },
+      {
+       "label": "People Business Partner",
+       "value": "People Business Partner"
+      },
+      {
+       "label": "Pricing",
+       "value": "Pricing"
+      },
+      {
+       "label": "Professional Services",
+       "value": "Professional Services"
+      },
+      {
+       "label": "Talent Acquisition",
+       "value": "Talent Acquisition"
+      }
+     ],
+     "tooltip": null,
+     "extraData": {},
+     "displayCount": 10,
+     "translateOptions": false,
+     "allowFreeText": false
+    }
+   ]
+  },
+  "count": 124,
+  "sortBy": "relevance",
+  "appliedFilters": {},
+  "debug": {},
+  "savedSearchMetadata": {
+   "savedSearchParamsHash": null,
+   "isSavedSearchActive": false
+  },
+  "resultsMetaData": {
+   "usedFuzzSearch": false,
+   "mocTitle": null
+  }
+ },
+ "metadata": null
+}

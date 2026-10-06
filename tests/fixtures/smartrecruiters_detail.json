@@ -1,0 +1,139 @@
+{
+ "id": "744000153504297",
+ "name": "Senior Enterprise Account Executive, Financial Services",
+ "uuid": "313b3c06-e24a-4454-b73c-06ef86c68d1d",
+ "jobId": "e7725220-8ebe-401e-9570-022d565a2f25",
+ "jobAdId": "d700be1c-72e8-42a1-913a-864dd8c35558",
+ "defaultJobAd": true,
+ "refNumber": "JB0072427",
+ "company": {
+  "name": "ServiceNow",
+  "identifier": "ServiceNow"
+ },
+ "location": {
+  "city": "Frankfurt",
+  "country": "de",
+  "address": "Börsenstraße 2-4 Boersenstrasse 2-4 5th Floor",
+  "postalCode": "60313",
+  "remote": false,
+  "hybrid": false,
+  "fullLocation": "Frankfurt, , Germany"
+ },
+ "customField": [
+  {
+   "fieldId": "60345fa28b4ba8595bef1863",
+   "fieldLabel": "Recruiting Team",
+   "valueId": "professional",
+   "valueLabel": "Professional"
+  },
+  {
+   "fieldId": "60345e1a0b24a127cbdfa148",
+   "fieldLabel": "Employee Type",
+   "valueId": "0082f6cbe6154da19322cbab1f6aa5af",
+   "valueLabel": "Regular"
+  },
+  {
+   "fieldId": "5f63a78f1dae5c5c4e54ba2b",
+   "fieldLabel": "Department",
+   "valueId": "2294208",
+   "valueLabel": "Sales"
+  },
+  {
+   "fieldId": "COUNTRY",
+   "fieldLabel": "Country/Region",
+   "valueId": "de",
+   "valueLabel": "Germany"
+  },
+  {
+   "fieldId": "5f63a78f1dae5c5c4e54ba2a",
+   "fieldLabel": "Brands",
+   "valueId": "default",
+   "valueLabel": "ServiceNow"
+  },
+  {
+   "fieldId": "60345d5c5165a31b17288279",
+   "fieldLabel": "Region",
+   "valueId": "395ee3093de740ba9cb8b3d35cb67e2d",
+   "valueLabel": "EMEA - Europe, Middle East and Africa"
+  },
+  {
+   "fieldId": "603462175165a31b1728827d",
+   "fieldLabel": "Cost Center",
+   "valueId": "CC3000",
+   "valueLabel": "3000 Sales Reps"
+  },
+  {
+   "fieldId": "6034601b43915a29a4b3389b",
+   "fieldLabel": "Job Location",
+   "valueId": "L_HAM003",
+   "valueLabel": "Hermannstraße 13, Hamburg, 20095, Germany(L_HAM003)"
+  },
+  {
+   "fieldId": "618ed92b8f5e5f110e5bfb95",
+   "fieldLabel": "Work Persona",
+   "valueId": "bf7551c6-9b06-4e7c-8217-3baf43edd060",
+   "valueLabel": "Flexible"
+  },
+  {
+   "fieldId": "690cc0e8c682c3dbadaa7d73",
+   "fieldLabel": "Job Posting Type",
+   "valueId": "professional",
+   "valueLabel": "Professional"
+  }
+ ],
+ "releasedDate": "2026-10-05T13:28:59.670Z",
+ "creator": {
+  "name": "",
+  "avatarUrl": ""
+ },
+ "postingUrl": "https://jobs.smartrecruiters.com/ServiceNow/744000153504297-senior-enterprise-account-executive-financial-services",
+ "applyUrl": "https://jobs.smartrecruiters.com/ServiceNow/744000153504297-senior-enterprise-account-executive-financial-services?oga=true",
+ "referralUrl": "https://jobs.smartrecruiters.com/external-referrals/company/ServiceNow/publication/313b3c06-e24a-4454-b73c-06ef86c68d1d?dcr_ci=ServiceNow",
+ "jobAd": {
+  "sections": {
+   "companyDescription": {
+    "title": "Company Description",
+    "text": "<p>It all started in sunny San Diego, California in 2004 when a visionary engineer, Fred Luddy, saw the potential to transform how we work. Fast forward to today — ServiceNow stands as a global market leader, bringing innovative AI-enhanced technology to over 8,100 customers, including 85% of the Fortune 500®. Our intelligent cloud-based platform seamlessly connects people, systems, and processes to empower organizations to find smarter, faster, and better ways to work. But this is just the beginning of our journey. Join us as we pursue our purpose to make the world work better for everyone.</p>"
+   },
+   "jobDescription": {
+    "title": "Job Description",
+    "text": "<p>You will produce new business sales revenue from a SaaS license model. You will accomplish this through account planning, territory planning, researching prospect customers, using business development strategies and completing field-based sales activities within a defined set of prospects, territory or vertical. This role will be focused on the \"Genossenschaftsbanken\" Territory (i.e. R+V Banken, Sparda Banken, DZ Bank)</p><p><strong>What you get to do in this role:</strong></p><ul><li>Develop relationships with multiple C-suite personas (e.g., CFO, CIO, COO, CDO) across all product sales</li><li>Oversee client relationship mapping to the account team, orchestrating an account strategy while leading across a broad virtual team (Solutions Consultants, Solutions Specialist, Success resources, Partners and Marketing, etc.)</li><li>Be a trusted advisor to your customers by understanding their business and advising on how ServiceNow can help help their IT roadmap</li><li>Identify the right specialist/ support resources to bring into a deal, at the right time</li></ul>"
+   },
+   "qualifications": {
+    "title": "Qualifications",
+    "text": "<p><strong>To be successful in this role you have:</strong></p><ul><li>10+ years of sales experience within software OR solutions sales organization</li><li>Experience of working with in the Financial Services market, ideally with a focus on the \"Genossenschaftsbanken\" Territory (i.e. R+V Banken, Sparda Banken, DZ Bank)</li><li>Experience establishing trusted relationships with current and prospective clients and other teams</li><li>Experience producing new business, negotiate deals, and maintain healthy C-Level relationships</li><li>Experience achieving sales targets</li><li>Experience in leveraging or critically thinking about how to integrate AI into work processes, decision-making, or problem-solving. This may include using AI-powered tools, automating workflows, analyzing AI-driven insights, or exploring AI's potential impact on the function or industry.</li><li>The ability to understand the \"bigger picture\" and our plans around IT</li><li>Experience promoting a customer success focus in a \"win as a team\" environment</li><li>Willingness to travel up to 50%</li></ul>"
+   },
+   "additionalInformation": {
+    "title": "Additional Information",
+    "text": "<p><strong>Work Personas</strong></p><p>We approach our distributed world of work with flexibility and trust. Work personas (flexible, remote, or required in office) are categories that are assigned to ServiceNow employees depending on the nature of their work and their assigned work location. <a href=\"https://careers.servicenow.com/life-at-servicenow#workpersonas\" rel=\"noopener noreferrer\"><u>Learn more here</u></a>. To determine eligibility for a work persona, ServiceNow may confirm the distance between your primary residence and the closest ServiceNow office using a third-party service.</p><p><strong>Equal Opportunity Employer</strong></p><p>ServiceNow is an equal opportunity employer. All qualified applicants will receive consideration for employment without regard to race, color, creed, religion, sex, sexual orientation, national origin or nationality, ancestry, age, disability, gender identity or expression, marital status, veteran status, or any other category protected by law. In addition, all qualified applicants with arrest or conviction records will be considered for employment in accordance with legal requirements.&#xa0;</p><p><strong>Accommodations</strong></p><p>We strive to create an accessible and inclusive experience for all candidates. If you require a reasonable accommodation to complete any part of the application process, or are unable to use this online application and need an alternative method to apply, please contact <a href=\"mailto:globaltalentss@servicenow.com\" rel=\"noopener noreferrer\">globaltalentss@servicenow.com </a>for assistance.&#xa0;</p><p><strong>Export Control Regulations</strong></p><p>For positions requiring access to controlled technology subject to export control regulations, including the U.S. Export Administration Regulations (EAR), ServiceNow may be required to obtain export control approval from government authorities for certain individuals. All employment is contingent upon ServiceNow obtaining any export license or other approval that may be required by relevant export control authorities.&#xa0;</p><p>From Fortune. ©2025 Fortune Media IP Limited. All rights reserved. Used under license.&#xa0;</p>"
+   }
+  }
+ },
+ "active": true,
+ "visibility": "PUBLIC",
+ "industry": {
+  "id": "it_and_services",
+  "label": "Information Technology And Services"
+ },
+ "function": {
+  "id": "sales",
+  "label": "Sales"
+ },
+ "department": {
+  "id": 2294208,
+  "label": "Sales"
+ },
+ "experienceLevel": {
+  "id": "not_applicable",
+  "label": "Not Applicable"
+ },
+ "typeOfEmployment": {
+  "id": "permanent",
+  "label": "Full-time"
+ },
+ "language": {
+  "code": "en",
+  "label": "English",
+  "labelNative": "English (US)"
+ }
+}

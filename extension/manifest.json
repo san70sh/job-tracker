@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Job Tracker capture",
+  "version": "0.1.0",
+  "description": "Send the job page you are viewing to your own Job Tracker running on this computer.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["http://127.0.0.1:8000/*", "http://localhost:8000/*"],
+  "background": {"service_worker": "background.js"},
+  "action": {"default_title": "Add this job to Job Tracker"},
+  "options_ui": {"page": "options.html", "open_in_tab": true}
+}

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Job Tracker capture: options</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; max-width: 520px; margin: 40px auto; padding: 0 16px; color: #1b1f24; }
+  label { display: block; margin: 16px 0 4px; font-weight: 600; }
+  input { width: 100%; padding: 8px 10px; font: inherit; border: 1px solid #c9ced6; border-radius: 8px; box-sizing: border-box; }
+  button { margin-top: 16px; padding: 8px 16px; font: inherit; border: 0; border-radius: 8px; background: #2f6fed; color: #fff; cursor: pointer; }
+  .hint { color: #667085; font-size: 13px; margin-top: 4px; }
+  #msg { margin-top: 12px; font-size: 14px; }
+</style>
+</head>
+<body>
+<h1>Job Tracker capture</h1>
+<p>Click the toolbar button on a job page to send it to your Job Tracker. Nothing leaves your computer.</p>
+<label for="token">Capture token</label>
+<input id="token" type="password" autocomplete="off" placeholder="paste the value of CAPTURE_TOKEN from .env">
+<div class="hint">Create one with <code>uv run python -m jobtracker capture-token</code>, then restart the app.</div>
+<label for="app">App address</label>
+<input id="app" type="text" placeholder="http://127.0.0.1:8000">
+<div class="hint">Only port 8000 on this computer is allowed by the extension's permissions.</div>
+<button id="save">Save</button>
+<div id="msg"></div>
+<script src="options.js"></script>
+</body>
+</html>

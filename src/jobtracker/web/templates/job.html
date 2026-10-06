@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block main %}
+<div id="root" class="muted">Loading…</div>
+{% endblock %}
+{% block js %}
+<script>
+// The full page for a job (a direct link, a new tab, a refresh). Everywhere else a job opens as a modal over the page you
+// were on; both are drawn by static/jobview.js.
+window.NO_JOB_MODAL = true;
+const JOB_ID = {{ job_id|tojson }};
+window.reload = () => JobView.page($("#root"), JOB_ID);
+window.reload();
+</script>
+{% endblock %}

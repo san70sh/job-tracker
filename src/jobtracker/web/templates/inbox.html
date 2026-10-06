@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block css %}
+  .row { display:flex; gap:12px; align-items:center; margin-bottom:8px; }
+  .row .grow { flex:1; min-width:0; }
+  .row a { color:var(--ink); font-weight:600; text-decoration:none; }
+  .age { font-size:12px; border-radius:8px; padding:0 7px; background:var(--bg); border:1px solid var(--line); color:var(--muted); }
+  .age.late { color:var(--bad); border-color:var(--bad); }
+  .st { font-size:12px; color:var(--muted); }
+{% endblock %}
+{% block main %}
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
+  <h2 style="margin:0">Postings waiting for a decision</h2>
+  <button class="ghost" onclick="seenAll()">Mark all seen</button>
+  <button class="ghost" onclick="pollNow(this)">Check boards now</button>
+</div>
+<p class="muted" style="margin-top:0">Oldest first. <b>Add</b> sends it through the tracker; <b>Not interested</b> hides it. Anything added or closed is purged automatically each night.</p>
+<div id="list"></div>
+{% endblock %}
+{% block js %}
+<script>
+const LATE = 2;
+function row(d) {
+  const late = d.age_days > LATE;
+  const age = d.age_days === 0 ? "today" : `${d.age_days}d waiting`;
+  return `<div class="card row" id="d-${d.id}"><span class="dot" data-c="${d.state === "new" ? "blue" : "gray"}" title="${esc(d.state)}"></span><div class="grow"><a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.title)}</a>
+    <div class="muted">${esc(d.company)} · ${esc(d.location || "location n/a")}${d.posted_at ? " · posted " + d.posted_at : ""}
+      · <span class="age ${late ? "late" : ""}">${age}</span> <span class="pill" data-c="${d.state === "new" ? "blue" : "gray"}">${esc(d.state)}</span></div></div>
+    <button onclick="add('${d.id}', this)">Add to tracker</button>
+    <button class="ghost" onclick="notInterested('${d.id}')">Not interested</button></div>`;
+}
+window.reloadInbox = window.reload = async function () {
+  const items = await api("/api/discovered");
+  $("#list").innerHTML = items.length ? items.map(row).join("") : '<p class="muted">Nothing waiting. Add company boards under “Company boards”.</p>';
+  refreshBadge();
+};
+async function add(id, btn) {
+  btn.disabled = true; btn.textContent = "Fetching…";
+  try { const r = await api(`/api/discovered/${id}/add`, {method:"POST"}); toast(`Added <a href="/jobs/${r.job_id}">${esc(r.message)}</a>`); }
+  catch (e) { toast(esc(e.message), "err"); }
+  window.reload();
+}
+async function notInterested(id) { await api(`/api/discovered/${id}/not-interested`, {method:"POST"}); window.reload(); }
+async function seenAll() { await api("/api/discovered/seen-all", {method:"POST"}); window.reload(); }
+async function pollNow(btn) {
+  btn.disabled = true; btn.textContent = "Checking…";
+  try { const r = await api("/api/boards/poll", {method:"POST"}); toast(`${r.new} new posting(s)`); } catch (e) { toast(esc(e.message), "err"); }
+  btn.disabled = false; btn.textContent = "Check boards now"; window.reload();
+}
+window.reload();
+</script>
+{% endblock %}

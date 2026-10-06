@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Job Tracker Diagrams</title>
+<style>
+  :root { --bg:#fff; --ink:#1b1f24; --muted:#667085; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14171c; --ink:#e8eaee; --muted:#9aa3b2; } }
+  body { margin:0 auto; max-width:1200px; padding:16px; background:var(--bg); color:var(--ink); font:15px/1.45 system-ui,sans-serif; }
+  h2 { margin:36px 0 2px; } .src { margin:0 0 8px; color:var(--muted); font-size:13px; }
+  .mermaid { overflow-x:auto; background:#fff; border-radius:8px; padding:8px; }
+</style></head><body>
+<h1>Job Tracker diagrams</h1>
+<p class="src">Generated from docs/*.md by scripts/build_diagrams.py</p>
+<section><h2>1. System diagram</h2><p class='src'>architecture.md</p><pre class='mermaid'>flowchart LR
+  subgraph Inputs
+    U1[Paste URL in the UI]
+    U2[CLI: ingest URL]
+    W[Watched company boards]
+  end
+
+  subgraph App[&quot;FastAPI app (one process)&quot;]
+    API[JSON API + pages + SSE]
+    SCH[Scheduler]
+    WATCH[Board watcher]
+    PIPE[Pipeline]
+    OUT[Notion outbox worker]
+  end
+
+  subgraph Pipeline[&quot;Pipeline: URL to stored job&quot;]
+    P1[Canonicalise + duplicate check]
+    P2[Resolve adapter]
+    P3[Fetch: ATS API, JSON-LD or HTML]
+    P4[Extract: sections, tags, facts, salary]
+    P5{Hard fields present?}
+    P6[LLM fallback, cached]
+  end
+
+  DB[(PostgreSQL 18 on port 5432)]
+  N[(Notion: read-only mirror)]
+  UI[Browser UI]
+
+  U1 --&gt; API
+  U2 --&gt; PIPE
+  W --&gt; WATCH
+  API --&gt; PIPE
+  PIPE --&gt; P1 --&gt; P2 --&gt; P3 --&gt; P4 --&gt; P5
+  P5 -- yes --&gt; DB
+  P5 -- no --&gt; P6 --&gt; DB
+  SCH --&gt; WATCH
+  SCH --&gt; OUT
+  SCH -- &quot;nightly purge, daily reminder&quot; --&gt; DB
+  WATCH -- &quot;new postings&quot; --&gt; DB
+  WATCH -. &quot;SSE popup&quot; .-&gt; UI
+  API &lt;--&gt; DB
+  API --&gt; UI
+  DB -- &quot;outbox rows&quot; --&gt; OUT --&gt; N
+</pre></section><section><h2>2. Ingesting one job</h2><p class='src'>architecture.md</p><pre class='mermaid'>sequenceDiagram
+  autonumber
+  participant U as You
+  participant API as FastAPI
+  participant R as Adapter registry
+  participant S as Source (ATS / site)
+  participant DB as PostgreSQL
+  participant L as LLM (optional)
+
+  U-&gt;&gt;API: POST /api/jobs {url}
+  API-&gt;&gt;DB: canonical URL already tracked?
+  alt duplicate
+    API--&gt;&gt;U: status duplicate + link
+  else new
+    API-&gt;&gt;R: resolve(url): hosts.json, URL patterns, HTML fingerprint, generic
+    R-&gt;&gt;S: GET structured endpoint (or HTML)
+    S--&gt;&gt;R: JSON / HTML
+    R-&gt;&gt;API: Posting (normalised)
+    API-&gt;&gt;API: extract fields, sections, technologies, salary
+    API-&gt;&gt;DB: same company + requisition id exists?
+    opt a hard field is missing or weak and an API key is set
+      API-&gt;&gt;L: strict JSON request for only the missing fields
+      L--&gt;&gt;API: validated, cached in llm_calls
+    end
+    API-&gt;&gt;DB: save job, sections, tags, snapshot, provenance, salary estimate
+    API--&gt;&gt;U: status created (needs_review if weak)
+  end
+</pre></section><section><h2>3. Status state machine</h2><p class='src'>architecture.md</p><pre class='mermaid'>stateDiagram-v2
+  [*] --&gt; Applied
+  Applied --&gt; OA_Assessment
+  Applied --&gt; Recruiter_Screen
+  Applied --&gt; Interviewing
+  OA_Assessment --&gt; Recruiter_Screen
+  OA_Assessment --&gt; Interviewing
+  Recruiter_Screen --&gt; OA_Assessment
+  Recruiter_Screen --&gt; Interviewing
+  Interviewing --&gt; Offer
+  Applied --&gt; Ghosted
+  OA_Assessment --&gt; Ghosted
+  Recruiter_Screen --&gt; Ghosted
+  Interviewing --&gt; Ghosted
+  Ghosted --&gt; Recruiter_Screen
+  Ghosted --&gt; OA_Assessment
+  Ghosted --&gt; Interviewing
+  Applied --&gt; Rejected
+  OA_Assessment --&gt; Rejected
+  Recruiter_Screen --&gt; Rejected
+  Interviewing --&gt; Rejected
+  Offer --&gt; Rejected
+  Ghosted --&gt; Rejected
+  Applied --&gt; Withdrawn
+  OA_Assessment --&gt; Withdrawn
+  Recruiter_Screen --&gt; Withdrawn
+  Interviewing --&gt; Withdrawn
+  Offer --&gt; Withdrawn
+</pre></section><section><h2>4. Board watcher and the discovery lifecycle</h2><p class='src'>architecture.md</p><pre class='mermaid'>stateDiagram-v2
+  [*] --&gt; baseline: first check, no filter
+  [*] --&gt; filtered: fails title or location filter
+  [*] --&gt; new: appears on a later check
+  new --&gt; seen: Mark all seen
+  new --&gt; added: Add to tracker
+  seen --&gt; added: Add to tracker
+  new --&gt; not_interested
+  seen --&gt; not_interested
+  baseline --&gt; closed: left the board
+  filtered --&gt; closed: left the board
+  new --&gt; closed: left the board
+  seen --&gt; closed: left the board
+  not_interested --&gt; closed: left the board
+  added --&gt; [*]: nightly purge
+  closed --&gt; [*]: nightly purge
+</pre></section><section><h2>5. Notion mirror (read-only, outbox)</h2><p class='src'>architecture.md</p><pre class='mermaid'>sequenceDiagram
+  autonumber
+  participant U as You
+  participant API as App
+  participant DB as PostgreSQL
+  participant W as Outbox worker (every minute)
+  participant N as Notion
+
+  U-&gt;&gt;API: edit a job / change status / delete
+  API-&gt;&gt;DB: write the change + one pending outbox row (same transaction)
+  Note over DB: repeated edits coalesce into one pending push
+  W-&gt;&gt;DB: due rows
+  W-&gt;&gt;N: create or update page (2.5 req/s, 429 Retry-After honoured)
+  alt success
+    W-&gt;&gt;DB: mark done, store content hash + page id
+  else failure
+    W-&gt;&gt;DB: attempts+1, backoff 2 to 60 min, parked as failed after 8
+  end
+  Note over W,N: delete queues an archive (page to trash)
+  Note over API,N: notion-reconcile compares Notion to the app, with --fix it overwrites hand-edits
+</pre></section><section><h2>6. Data model (17 tables)</h2><p class='src'>architecture.md</p><pre class='mermaid'>erDiagram
+  companies ||--o{ jobs : &quot;employs&quot;
+  jobs ||--o{ job_sections : &quot;page body&quot;
+  jobs ||--o{ job_technologies : &quot;tagged&quot;
+  technologies ||--o{ job_technologies : &quot;&quot;
+  jobs ||--o{ status_events : &quot;history&quot;
+  jobs ||--o{ job_snapshots : &quot;raw source&quot;
+  jobs ||--o{ field_provenance : &quot;per field&quot;
+  llm_calls ||--o{ field_provenance : &quot;when method is llm&quot;
+  jobs ||--o{ salary_estimates : &quot;resolver result&quot;
+  salary_benchmarks ||--o{ salary_estimates : &quot;basis&quot;
+  companies ||--o{ salary_benchmarks : &quot;&quot;
+  companies ||--o{ watched_boards : &quot;&quot;
+  watched_boards ||--o{ discovered_postings : &quot;temporary&quot;
+  discovered_postings }o--o| jobs : &quot;added as&quot;
+  jobs ||--o| notion_sync : &quot;last push&quot;
+  jobs ||--o{ notion_outbox : &quot;pending pushes&quot;
+
+  jobs {
+    uuid id PK
+    text role
+    uuid company_id FK
+    job_status status
+    job_stage stage
+    date date_applied
+    text job_ref
+    text job_link
+    text canonical_url
+    text level
+    text location
+    work_mode work_mode
+    text experience_required
+    text key_responsibilities
+    text requirements
+    text notes
+    numeric salary_min_lpa
+    numeric salary_max_lpa
+    boolean needs_review
+    text notion_page_id
+  }
+  discovered_postings {
+    uuid id PK
+    int board_id FK
+    text ats_posting_id
+    text state
+    timestamptz first_seen_at
+  }
+  notion_outbox {
+    bigint id PK
+    uuid job_id FK
+    text op
+    text status
+    int attempts
+  }
+</pre></section><section><h2>7. Source resolution and pathways</h2><p class='src'>extraction-pathways.md</p><pre class='mermaid'>flowchart TD
+  U[URL] --&gt; H{hosts.json entry?}
+  H -- yes --&gt; A[Adapter from the entry]
+  H -- no --&gt; R{URL pattern known?}
+  R -- yes --&gt; A
+  R -- no --&gt; F{HTML fingerprint: Jibe?}
+  F -- yes --&gt; A
+  F -- no --&gt; P4[P4 generic parser]
+  A --&gt; P1[P1 documented JSON]
+  A --&gt; P2[P2 undocumented JSON]
+  A --&gt; P3[P3 iCIMS]
+  P1 --&gt; N[Posting model]
+  P2 --&gt; N
+  P3 --&gt; N
+  P4 --&gt; N
+  P2 -. &quot;schema drift or error&quot; .-&gt; P4
+  P3 -. &quot;schema drift or error&quot; .-&gt; P4
+  N --&gt; E[Extractors]
+</pre></section>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true, securityLevel: 'loose' });
+</script></body></html>

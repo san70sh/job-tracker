@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block css %}
+  .hero { min-height:46vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px 0 8px; }
+  .hero h1 { font-size:24px; margin:0 0 4px; font-weight:650; }
+  .box { width:100%; max-width:640px; margin-top:16px; }
+  .box textarea { min-height:0; height:46px; max-height:300px; resize:none; overflow-y:auto; text-align:left; font-size:15px; line-height:1.4; padding:12px 14px; border-radius:12px; }
+  .row { display:flex; gap:10px; align-items:center; justify-content:center; margin-top:10px; flex-wrap:wrap; }
+  .mode { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:1px 9px; font-size:12px; }
+  .mode.url { color:var(--accent); border-color:var(--accent); }
+  .link { color:var(--accent); cursor:pointer; font-size:13px; background:none; border:0; padding:0; }
+  .recent { max-width:640px; margin:18px auto 0; font-size:14px; }
+  .recent h3 { font-size:13px; color:var(--muted); margin:0 0 6px; font-weight:500; }
+  .recent a { color:var(--ink); text-decoration:none; }
+  .recent div { padding:4px 0; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; gap:12px; }
+{% endblock %}
+{% block main %}
+<section class="hero">
+  <h1>Add a job</h1>
+  <div class="muted">Paste a link, or the full text of the posting</div>
+  <div class="box">
+    <textarea id="src" rows="1" placeholder="https://… or the whole job description" aria-label="Job link or posting text" autofocus></textarea>
+    <div class="row">
+      <span class="mode" id="mode"></span>
+      <button type="button" class="link" id="flip"></button>
+      <label class="muted" id="applied-wrap" style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="applied"> already applied</label>
+      <button id="go" type="button">Add job</button>
+    </div>
+  </div>
+  <div class="notice" id="notice" hidden></div>
+</section>
+
+<section class="preview card" id="preview" hidden></section>
+
+<section class="recent" id="recent" hidden><h3>Recently added</h3><div id="recent-list" style="display:block"></div></section>
+{% endblock %}
+{% block js %}
+<script src="/static/preview.js"></script>
+<script>
+const src = $("#src");
+let forced = null;          // null = detect from the content; "url" or "text" = you flipped it
+let pendingLink = null;     // a link the site refused to give us; its pasted text is saved with it
+
+const looksLikeUrl = v => /^https?:\/\/\S+$/i.test(v.trim());
+const currentMode = () => forced || (looksLikeUrl(src.value) ? "url" : "text");
+
+function grow() { src.style.height = "auto"; src.style.height = Math.min(src.scrollHeight + 2, 300) + "px"; src.style.overflowY = src.scrollHeight > 298 ? "auto" : "hidden"; }
+function refreshMode() {
+  const m = currentMode(), empty = !src.value.trim();
+  $("#mode").textContent = empty ? "URL or full text" : (m === "url" ? "URL" : "Full text");
+  $("#mode").classList.toggle("url", m === "url" && !empty);
+  $("#flip").textContent = empty ? "" : (m === "url" ? "treat as full text" : "treat as URL");
+  $("#go").textContent = m === "url" ? "Add job" : "Review";
+  $("#applied-wrap").style.display = m === "url" ? "flex" : "none";
+}
+src.addEventListener("input", () => { forced = forced && !src.value.trim() ? null : forced; grow(); refreshMode(); });
+$("#flip").addEventListener("click", () => { forced = currentMode() === "url" ? "text" : "url"; refreshMode(); });
+src.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey && (currentMode() === "url" || e.ctrlKey || e.metaKey)) { e.preventDefault(); go(); }
+});
+$("#go").addEventListener("click", go);
+
+function say(html) { const n = $("#notice"); n.innerHTML = html; n.hidden = !html; }
+
+async function go() {
+  const v = src.value.trim(); if (!v) return;
+  const btn = $("#go"); btn.disabled = true; say("");
+  try {
+    if (currentMode() === "url") await addUrl(v); else await review(v);
+  } catch (err) { toast(esc(err.message), "err"); }
+  btn.disabled = false; refreshMode();
+}
+
+async function addUrl(url) {
+  $("#go").textContent = "Fetching…";
+  try {
+    const r = await api("/api/jobs", {method:"POST", body:{url, applied:$("#applied").checked}});
+    if (r.status === "duplicate") toast(`Already tracked: <a href="/jobs/${r.job_id}">${esc(r.message)}</a>`);
+    else { toast(`Added <a href="/jobs/${r.job_id}">${esc(r.message)}</a>${r.needs_review ? " — needs a quick review" : ""}`); src.value = ""; grow(); loadRecent(); }
+  } catch (err) {
+    if (err.data && err.data.status === "needs_text") {
+      pendingLink = url; forced = "text"; src.value = ""; grow();
+      src.placeholder = "Paste the posting text here";
+      say(esc(err.data.message)); src.focus();
+    } else throw err;
+  }
+}
+
+// ───────── preview (shared with the extension's pop-up: static/preview.js) ─────────
+async function review(text) {
+  $("#go").textContent = "Reading…";
+  await JobPreview.open($("#preview"), {text, link: pendingLink});
+  $("#preview").scrollIntoView({behavior: "smooth", block: "nearest"});
+}
+
+let RECENT = [];
+window.jobNav = () => RECENT.map(j => ({id: j.id, review: j.needs_review}));
+async function loadRecent() {
+  try {
+    await metaReady;
+    const jobs = (await api("/api/jobs")).sort((a, b) => (a.created_at < b.created_at ? 1 : -1)).slice(0, 5);
+    RECENT = jobs;
+    $("#recent-list").innerHTML = jobs.map(j => `<div><span style="display:flex;gap:8px;align-items:center;min-width:0"><span class="dot" data-st="${stSlug(colOf(j))}" title="${esc(statusLabel(colOf(j)))}"></span><a href="/jobs/${j.id}">${esc(j.role)}</a></span><span class="muted">${esc(j.company)}</span></div>`).join("");
+    $("#recent").hidden = !jobs.length;
+  } catch {}
+}
+window.reload = loadRecent;
+refreshMode(); loadRecent();
+</script>
+{% endblock %}

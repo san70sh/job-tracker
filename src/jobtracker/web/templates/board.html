@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% block css %}
+  /* the summary strip: one chip per status with its count. Click one to focus that column. */
+  .funnel { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; }
+  .fchip { display:flex; align-items:baseline; gap:8px; padding:6px 12px; background:var(--card); color:var(--ink); border:1px solid var(--line); border-left:4px solid var(--c); border-radius:10px; cursor:pointer; }
+  .fchip b { font-size:18px; font-weight:650; line-height:1; }
+  .fchip span { font-size:12px; color:var(--muted); }
+  .fchip.zero { background:transparent; opacity:.7; } .fchip.zero b { color:var(--muted); font-weight:500; }
+  .fchip.on { border-color:var(--c); background:color-mix(in srgb, var(--c) 14%, var(--card)); box-shadow:inset 0 -2px 0 var(--c); }
+  .fchip.over { outline:2px dashed var(--c); }
+  .funnel .opt { margin-left:auto; color:var(--muted); font-size:13px; display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
+
+  /* the board: each column scrolls on its own, so one long column no longer sets the height of the page */
+  .board { display:grid; gap:12px; height:calc(100vh - 250px); min-height:380px; overflow-x:auto; padding-bottom:4px; }
+  .col { display:flex; flex-direction:column; min-height:0; background:var(--bg); border:1px solid var(--line); border-top:3px solid var(--c); border-radius:10px; padding:8px 8px 0; }
+  .col.over { outline:2px dashed var(--c); }
+  .col h3 { flex:none; margin:2px 4px 8px; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--ct); display:flex; justify-content:space-between; gap:8px; }
+  .col .cards { flex:1; min-height:0; overflow-y:auto; padding:0 2px 8px; }
+  @supports selector(::-webkit-scrollbar) {
+    .cards::-webkit-scrollbar { width:8px; }
+    .cards::-webkit-scrollbar-track { background:transparent; }
+    .cards::-webkit-scrollbar-thumb { background-color:transparent; border-radius:8px; transition:background-color .28s ease; }
+    .cards:hover::-webkit-scrollbar-thumb, .cards.scrolling::-webkit-scrollbar-thumb { background-color:color-mix(in srgb, var(--c) 65%, transparent); }
+    .cards::-webkit-scrollbar-thumb:hover { background-color:var(--c); }
+    .board::-webkit-scrollbar { height:8px; }
+    .board::-webkit-scrollbar-track { background:transparent; }
+    .board::-webkit-scrollbar-thumb { background-color:var(--line); border-radius:8px; }
+    .board::-webkit-scrollbar-thumb:hover { background-color:var(--muted); }
+  }
+  @supports not selector(::-webkit-scrollbar) {  /* Firefox: the standard properties cannot animate, so it just switches */
+    .cards { scrollbar-width:thin; scrollbar-color:transparent transparent; }
+    .cards:hover, .cards.scrolling { scrollbar-color:color-mix(in srgb, var(--c) 65%, transparent) transparent; }
+    .board { scrollbar-width:thin; }
+  }
+
+  .board.focus .cards { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:8px; align-content:start; }
+  .board.focus .job { margin-bottom:0; }
+  .job { margin-bottom:6px; padding:8px 10px; cursor:grab; border-left:3px solid var(--c); }
+  .job a.t { color:var(--ink); font-weight:600; text-decoration:none; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; line-height:1.3; }
+  .job a.t:hover { text-decoration:underline; }
+  .job .sub, .job .meta { font-size:12.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+  .job .tags { margin-top:4px; max-height:22px; overflow:hidden; }
+  .job .tag { font-size:11.5px; }
+  .job .meta .pill { font-size:11px; padding:0 6px; }
+  .job .more { font-size:11.5px; color:var(--muted); }
+  .flag { color:var(--warn); font-size:12px; }
+  .job button { padding:2px 8px; margin-top:6px; }
+
+  .filters { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; }
+  .filters input[type=search] { flex:1 1 260px; max-width:380px; width:auto; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:7px 10px; }
+  .filters select { width:auto; }
+  .filters .shown { margin-left:auto; color:var(--muted); font-size:13px; }
+  .dd { position:relative; }
+  .dd > button { background:var(--card); color:var(--ink); border:1px solid var(--line); }
+  .dd > button.active { border-color:var(--accent); color:var(--accent); font-weight:600; }
+  .panel { position:absolute; top:calc(100% + 4px); left:0; z-index:15; width:290px; max-height:380px; display:flex; flex-direction:column;
+           background:var(--card); border:1px solid var(--line); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.2); }
+  .panel[hidden] { display:none; }
+  .panel .find { margin:8px; width:auto; }
+  .panel .opts { overflow:auto; padding:0 8px 8px; }
+  .panel label { display:flex; gap:8px; align-items:center; padding:4px; border-radius:6px; cursor:pointer; font-size:14px; }
+  .panel label:hover { background:var(--bg); }
+  .panel label[hidden] { display:none; }
+  .panel .n { margin-left:auto; color:var(--muted); font-size:12px; }
+  .panel .foot { border-top:1px solid var(--line); padding:6px 10px; font-size:13px; }
+  .panel .foot a { color:var(--accent); cursor:pointer; }
+  .empty { color:var(--muted); font-size:13px; padding:6px 4px; }
+{% endblock %}
+{% block main %}
+<div class="funnel" id="funnel"></div>
+<div class="filters" id="filters">
+  <input type="search" id="q" placeholder="Search title, job ID or company…" aria-label="Search by title, job ID or company" autocomplete="off">
+  <div class="dd" id="dd-company">
+    <button type="button" aria-expanded="false" aria-haspopup="true">Company</button>
+    <div class="panel" hidden>
+      <input type="text" class="find" placeholder="Find a company…" aria-label="Find a company">
+      <div class="opts"></div>
+      <div class="foot"><a class="none">Clear selection</a></div>
+    </div>
+  </div>
+  <div class="dd" id="dd-city">
+    <button type="button" aria-expanded="false" aria-haspopup="true">Location</button>
+    <div class="panel" hidden>
+      <input type="text" class="find" placeholder="Find a location…" aria-label="Find a location">
+      <div class="opts"></div>
+      <div class="foot"><a class="none">Clear selection</a></div>
+    </div>
+  </div>
+  <select id="order" aria-label="Order cards by applied date">
+    <option value="new">Newest applied first</option>
+    <option value="old">Oldest applied first</option>
+  </select>
+  <button type="button" class="ghost" id="clear">Clear all</button>
+  <span class="shown" id="shown"></span>
+</div>
+<div class="board" id="board"></div>
+{% endblock %}
+{% block js %}
+<script>
+let cols = [];  // [name, label] per pipeline column; filled from /api/meta once it has arrived
+
+// ───────── view state (kept in JS so the live reloads do not reset it; remembered across visits) ─────────
+const F = { q: "", company: new Set(), city: new Set(), order: "new", focus: null, showEmpty: false };
+const STORE = "jt-board-filters";
+function saveState() {
+  try { localStorage.setItem(STORE, JSON.stringify({ q: F.q, company: [...F.company], city: [...F.city], order: F.order, focus: F.focus, showEmpty: F.showEmpty })); } catch {}
+}
+function loadState() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE) || "{}");
+    F.q = typeof s.q === "string" ? s.q : "";
+    (s.company || []).forEach(x => F.company.add(x));
+    (s.city || []).forEach(x => F.city.add(x));
+    F.order = s.order === "old" ? "old" : "new";
+    F.focus = cols.some(([k]) => k === s.focus) ? s.focus : null;
+    F.showEmpty = !!s.showEmpty;
+  } catch {}
+  $("#q").value = F.q; $("#order").value = F.order;
+}
+
+let ALL = [];
+
+// ───────── cards ─────────
+const clip = (s, n) => { s = String(s || "").trim(); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
+// "Principal Associate — Senior Software Engineer…" (imported prose) -> "Principal Associate"; "Mid" stays "Mid"
+const shortLevel = s => clip(String(s || "").split(/\s[—–-]\s|\s\(|\(|;|,/)[0], 22);
+function sal(j) { return j.salary_min_lpa != null ? `₹${j.salary_min_lpa}–${j.salary_max_lpa} L` : ""; }
+function card(j) {
+  const techs = j.technologies || [], shown = techs.slice(0, 3);
+  const place = (j.cities || []).filter(c => c !== "Unspecified").slice(0, 2).join(", ");
+  const where = [shortLevel(j.level), place || clip(j.location, 26)].filter(Boolean).map(esc).join(" · ");
+  const pay = sal(j) ? `<span class="money">${esc(sal(j))}</span>` : "";
+  const meta = [where, modePill(j.work_mode), pay].filter(Boolean).join(" ");
+  const when = j.date_applied ? "applied " + j.date_applied.slice(5).replace("-", "/") : "";
+  const sub = [j.company, when].filter(Boolean).map(esc).join(" · ");
+  const tags = shown.map(t => `<span class="tag">${esc(t)}</span>`).join("") + (techs.length > 3 ? `<span class="more"> +${techs.length - 3}</span>` : "");
+  const apply = j.stage !== "Applied" ? `<button class="ghost" onclick="setStatus('${j.id}','Applied')">Mark applied</button>` : "";
+  return `<div class="card job" draggable="true" data-id="${j.id}" data-st="${stSlug(colOf(j))}" title="${esc(j.role)} — ${esc(j.company)}${j.job_ref ? " — " + esc(clip(j.job_ref, 60)) : ""}">
+    <a class="t" href="/jobs/${j.id}">${esc(j.role)}</a>${j.needs_review ? ' <span class="flag" title="Some fields could not be extracted — check them">review</span>' : ""}
+    <div class="sub">${sub}</div>${meta ? `<div class="meta" title="${esc(j.level || "")}">${meta}</div>` : ""}
+    ${tags ? `<div class="tags">${tags}</div>` : ""}${apply}</div>`;
+}
+async function setStatus(id, status) {
+  try { await api(`/api/jobs/${id}/status`, {method:"POST", body:{status}}); window.reload(); }
+  catch (e) { toast(esc(e.message), "err"); }
+}
+
+// ───────── matching and ordering ─────────
+function matches(j) {
+  if (F.company.size && !F.company.has(j.company)) return false;                     // within a filter: any of the chosen
+  if (F.city.size && !(j.cities || []).some(c => F.city.has(c))) return false;       // across filters: all must hold
+  const terms = F.q.toLowerCase().split(/\s+/).filter(Boolean);
+  if (terms.length) {
+    const hay = `${j.role} ${j.company} ${j.job_ref || ""}`.toLowerCase();
+    if (!terms.every(t => hay.includes(t))) return false;                             // every word must appear
+  }
+  return true;
+}
+// Applied date, newest (or oldest) first; cards without a date always go last; ties by when they were added.
+function byDate(a, b) {
+  // A comparator returns > 0 to put `a` AFTER `b`. For "newest first", an older `a` must therefore return +1.
+  const da = a.date_applied || "", db = b.date_applied || "", sign = F.order === "new" ? 1 : -1;
+  if (da !== db) { if (!da) return 1; if (!db) return -1; return da < db ? sign : -sign; }
+  return a.created_at === b.created_at ? 0 : (a.created_at < b.created_at ? sign : -sign);
+}
+
+// ───────── multi-select dropdowns ─────────
+function counts(getter) {
+  const m = new Map();
+  for (const j of ALL) for (const v of getter(j)) m.set(v, (m.get(v) || 0) + 1);
+  return [...m].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+}
+function buildPanel(id, kind, entries) {
+  const dd = $("#" + id), opts = $(".opts", dd);
+  const present = new Set(entries.map(e => e[0]));
+  for (const v of [...F[kind]]) if (!present.has(v)) F[kind].delete(v);               // drop remembered choices that no longer exist
+  opts.innerHTML = entries.length ? entries.map(([name, n]) =>
+    `<label><input type="checkbox" value="${esc(name)}" ${F[kind].has(name) ? "checked" : ""}><span>${esc(name)}</span><span class="n">${n}</span></label>`).join("")
+    : '<div class="empty">Nothing yet</div>';
+  applyFind(dd);
+}
+function applyFind(dd) {
+  const needle = $(".find", dd).value.toLowerCase().trim();
+  for (const l of dd.querySelectorAll(".opts label")) l.hidden = !!needle && !l.textContent.toLowerCase().includes(needle);
+}
+function labelButtons() {
+  for (const [id, kind, name] of [["dd-company", "company", "Company"], ["dd-city", "city", "Location"]]) {
+    const b = $("#" + id + " > button"), n = F[kind].size;
+    b.textContent = n ? `${name} (${n})` : name;
+    b.classList.toggle("active", n > 0);
+  }
+}
+function closePanels(except) {
+  for (const dd of document.querySelectorAll(".dd")) if (dd !== except) { $(".panel", dd).hidden = true; $("button", dd).setAttribute("aria-expanded", "false"); }
+}
+for (const [id, kind] of [["dd-company", "company"], ["dd-city", "city"]]) {
+  const dd = $("#" + id), btn = $("button", dd), panel = $(".panel", dd);
+  btn.addEventListener("click", e => {
+    e.stopPropagation(); closePanels(dd);
+    panel.hidden = !panel.hidden; btn.setAttribute("aria-expanded", String(!panel.hidden));
+    if (!panel.hidden) $(".find", dd).focus();
+  });
+  panel.addEventListener("click", e => e.stopPropagation());
+  $(".find", dd).addEventListener("input", () => applyFind(dd));
+  $(".opts", dd).addEventListener("change", e => {
+    if (e.target.type !== "checkbox") return;
+    e.target.checked ? F[kind].add(e.target.value) : F[kind].delete(e.target.value);
+    saveState(); render();
+  });
+  $(".none", dd).addEventListener("click", () => { F[kind].clear(); saveState(); buildOptions(); render(); });
+}
+document.addEventListener("click", () => closePanels(null));
+document.addEventListener("keydown", e => { if (e.key === "Escape") closePanels(null); });
+
+function buildOptions() {
+  buildPanel("dd-company", "company", counts(j => [j.company]));
+  buildPanel("dd-city", "city", counts(j => j.cities || []));
+}
+
+// ───────── search, order, clear ─────────
+let timer;
+$("#q").addEventListener("input", e => { clearTimeout(timer); timer = setTimeout(() => { F.q = e.target.value; saveState(); render(); }, 150); });
+$("#order").addEventListener("change", e => { F.order = e.target.value; saveState(); render(); });
+$("#clear").addEventListener("click", () => {
+  F.q = ""; F.company.clear(); F.city.clear(); F.focus = null; $("#q").value = "";
+  saveState(); buildOptions(); render();
+});
+
+// ───────── dropping a card on a column or on a summary chip changes its status ─────────
+function dropTarget(el, status) {
+  el.addEventListener("dragover", e => { e.preventDefault(); el.classList.add("over"); });
+  el.addEventListener("dragleave", () => el.classList.remove("over"));
+  el.addEventListener("drop", e => { e.preventDefault(); el.classList.remove("over"); if (status !== META.inbox.name) setStatus(e.dataTransfer.getData("id"), status); });
+}
+
+// ───────── drawing ─────────
+function render() {
+  const jobs = ALL.filter(matches);
+  const by = Object.fromEntries(cols.map(([k]) => [k, []]));
+  for (const j of jobs) by[colOf(j)].push(j);
+  for (const k in by) by[k].sort(byDate);
+
+  // summary strip
+  $("#funnel").innerHTML = cols.map(([k, label]) =>
+    `<button type="button" class="fchip ${by[k].length ? "" : "zero"} ${F.focus === k ? "on" : ""}" data-status="${esc(k)}" data-st="${stSlug(k)}" title="${F.focus === k ? "Show all columns" : "Focus on " + esc(label)}"><b>${by[k].length}</b><span>${esc(label)}</span></button>`).join("") +
+    `<span class="opt">Drag a card onto a status to move it <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="showEmpty" ${F.showEmpty ? "checked" : ""}> show empty columns</label></span>`;
+  for (const chip of document.querySelectorAll(".fchip")) {
+    chip.addEventListener("click", () => { F.focus = F.focus === chip.dataset.status ? null : chip.dataset.status; saveState(); render(); });
+    dropTarget(chip, chip.dataset.status);
+  }
+  $("#showEmpty").addEventListener("change", e => { F.showEmpty = e.target.checked; saveState(); render(); });
+
+  // columns: the focused one alone, or the ones that have jobs (empty statuses stay reachable as chips, which accept drops)
+  let shown = F.focus ? cols.filter(([k]) => k === F.focus) : cols.filter(([k]) => F.showEmpty || by[k].length);
+  if (!shown.length) shown = cols;  // nothing matches the filters: show the empty board rather than a blank page
+  $("#board").classList.toggle("focus", !!F.focus);
+  $("#board").style.gridTemplateColumns = shown.map(() => "minmax(270px, 1fr)").join(" ");
+  $("#board").innerHTML = shown.map(([k, label]) =>
+    `<div class="col" data-status="${esc(k)}" data-st="${stSlug(k)}"><h3><span>${esc(label)}</span><span>${by[k].length}</span></h3>
+       <div class="cards">${by[k].map(card).join("") || '<div class="empty">Nothing here</div>'}</div></div>`).join("");
+  $("#shown").textContent = jobs.length === ALL.length ? `${ALL.length} jobs` : `Showing ${jobs.length} of ${ALL.length}`;
+  labelButtons();
+  for (const el of document.querySelectorAll(".job")) el.addEventListener("dragstart", e => e.dataTransfer.setData("id", el.dataset.id));
+  for (const col of document.querySelectorAll(".col")) dropTarget(col, col.dataset.status);
+}
+// the modal's ← / → walk through the jobs currently shown (filters applied), column by column, and can jump to flagged ones
+window.jobNav = () => {
+  const by = Object.fromEntries(cols.map(([k]) => [k, []]));
+  for (const j of ALL.filter(matches)) by[colOf(j)].push(j);
+  const out = [];
+  for (const [k] of cols) for (const j of by[k].sort(byDate)) out.push({id: j.id, review: j.needs_review});
+  return out;
+};
+window.reload = async function () {
+  ALL = await api("/api/jobs");
+  buildOptions();
+  render();
+};
+document.addEventListener("scroll", e => {
+  const el = e.target;
+  if (!el.classList || !el.classList.contains("cards")) return;
+  el.classList.add("scrolling");
+  clearTimeout(el._fade); el._fade = setTimeout(() => el.classList.remove("scrolling"), 900);
+}, true);
+metaReady.then(() => {
+  cols = [[META.inbox.name, META.inbox.name], ...META.statuses.map(s => [s.name, s.name])];
+  loadState();
+  window.reload();
+});
+</script>
+{% endblock %}

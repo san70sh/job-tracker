@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block css %}
+  header, .banner { display:none; }
+  main { max-width:none; padding:12px; }
+  .preview { margin:0; max-width:none; }
+  .done { text-align:center; padding:28px 8px; }
+{% endblock %}
+{% block main %}
+<section class="preview card" id="box"><div class="muted">Reading the page…</div></section>
+{% endblock %}
+{% block js %}
+<script src="/static/preview.js"></script>
+<script>
+window.NO_JOB_MODAL = true;
+const CAPTURE_ID = {{ capture_id|tojson }};
+const box = $("#box");
+(async () => {
+  try {
+    const cap = await api("/api/captures/" + encodeURIComponent(CAPTURE_ID));
+    await JobPreview.open(box, {
+      text: cap.text, link: cap.link, hints: cap.hints, siteLink: cap.site_link,
+      onCancel: () => window.close(),
+      onSaved: r => {
+        box.innerHTML = `<div class="done"><b>Saved.</b><p class="muted">${esc(r.message)}</p>
+          <p><a href="/jobs/${r.job_id}" target="_blank" rel="noopener">Open the job</a> · <a href="#" id="close">Close this window</a></p></div>`;
+        $("#close").onclick = e => { e.preventDefault(); window.close(); };
+      },
+    });
+  } catch (err) {
+    box.innerHTML = `<div class="notice" style="margin:0">${esc(err.message)}</div>`;
+  }
+})();
+</script>
+{% endblock %}
