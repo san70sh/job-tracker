@@ -23,9 +23,20 @@ def allowed_minutes() -> set[int]:
     return {i["minutes"] for i in poll_intervals()}
 
 
+def country_names() -> dict[str, str]:
+    """ISO country code -> name, for systems that write places as codes (iCIMS: IN-KA-Bengaluru)."""
+    return load()["country_names"]
+
+
+def max_age_days() -> int:
+    """How old a posting may be and still be announced."""
+    return load()["max_age_days"]
+
+
 def page_settings() -> dict[str, Any]:
     """What the Company boards page needs besides the intervals."""
-    return {"stale_after_hours": load()["stale_after_hours"], "ats_colours": load()["ats_colours"]}
+    return {"stale_after_hours": load()["stale_after_hours"], "ats_colours": load()["ats_colours"],
+            "max_age_days": max_age_days()}
 
 
 def suggestion_settings() -> dict[str, Any]:

@@ -150,6 +150,30 @@ async def test_smartrecruiters_list_paginates(fetcher, fx):
     assert len(jobs) == len(page["content"]) and jobs[0].url.startswith("https://jobs.smartrecruiters.com/ServiceNow/")
 
 
+def test_workday_reads_its_posted_text_as_a_date():
+    from datetime import date
+
+    from jobtracker.adapters.workday import posted_on
+
+    today = date(2026, 10, 6)
+    assert posted_on("Posted Today", today) == today
+    assert posted_on("Posted Yesterday", today) == date(2026, 10, 5)
+    assert posted_on("Posted 2 Days Ago", today) == date(2026, 10, 4)
+    assert posted_on("Posted 30+ Days Ago", today) == date(2026, 9, 6)
+    assert posted_on(None, today) is None and posted_on("Open until filled", today) is None
+
+
+@respx.mock
+async def test_workday_skips_a_list_entry_with_no_title_and_still_counts_the_list_as_complete(fetcher):
+    b = BoardRef("workday", "acme", config={"host": "acme.wd1.myworkdayjobs.com", "site": "Ext"})
+    page = {"total": 2, "jobPostings": [
+        {"bulletFields": ["JR-0000132739"]},  # a bare requisition number, as Workday sometimes lists
+        {"title": "Backend Engineer", "externalPath": "/job/Pune/Backend-Engineer_JR1", "bulletFields": ["JR1"], "locationsText": "Pune"}]}
+    respx.post("https://acme.wd1.myworkdayjobs.com/wday/cxs/acme/Ext/jobs").mock(return_value=httpx.Response(200, json=page))
+    jobs = await Workday().list_postings(b, fetcher)
+    assert [j.ats_posting_id for j in jobs] == ["JR1"] and jobs.complete  # complete: postings missing later are still seen as closed
+
+
 @respx.mock
 async def test_workday_list_and_detail(fetcher, fx):
     b = BoardRef("workday", "nvidia", config={"host": "nvidia.wd5.myworkdayjobs.com", "site": "NVIDIAExternalCareerSite"})
@@ -157,7 +181,7 @@ async def test_workday_list_and_detail(fetcher, fx):
     lst["total"] = 3
     respx.post("https://nvidia.wd5.myworkdayjobs.com/wday/cxs/nvidia/NVIDIAExternalCareerSite/jobs").mock(return_value=httpx.Response(200, json=lst))
     jobs = await Workday().list_postings(b, fetcher)
-    assert jobs and jobs[0].ats_posting_id.startswith("JR")
+    assert jobs and jobs[0].ats_posting_id.startswith("JR") and all(j.posted_at for j in jobs)  # fixture rows all say "N Days Ago"
 
     url = "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/Israel-Yokneam/Software-Engineer--SPE_JR2015623"
     respx.get("https://nvidia.wd5.myworkdayjobs.com/wday/cxs/nvidia/NVIDIAExternalCareerSite/job/Israel-Yokneam/Software-Engineer--SPE_JR2015623").mock(
@@ -181,6 +205,32 @@ async def test_oracle_list_and_detail(fetcher, fx):
     r = registry.resolve_static("https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/210711544")
     post = await r.adapter.fetch(r.target, fetcher)
     assert post.title.startswith("J.P. Morgan")
+
+
+AMEX_SEARCH = ("https://careers.americanexpress.com/en/sites/CX_1/jobs?intlink=us-amex-career-en-us-search&lastSelectedFacet=AttributeChar6"
+               "&selectedFlexFieldsFacets=%22AttributeChar6%7CTechnology%22&selectedLocationsFacet=300000000228786")
+
+
+@respx.mock
+async def test_oracle_site_on_a_company_domain_keeps_its_filters_and_links(fetcher, fx):
+    ad, b = registry.board_from_url(AMEX_SEARCH)
+    assert ad.ats == "oracle" and b.company == "American Express" and b.slug == "egug.fa.us2.oraclecloud.com"  # the API lives on Oracle's host
+    assert b.config["public_host"] == "careers.americanexpress.com" and b.config["site"] == "CX_1"
+    assert b.config["facets"] == {"selectedFlexFieldsFacets": '"AttributeChar6|Technology"', "selectedLocationsFacet": "300000000228786"}
+    route = respx.get("https://egug.fa.us2.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions").mock(
+        return_value=httpx.Response(200, json=fx("oracle_list.json")))
+    jobs = await ad.list_postings(b, fetcher)
+    from urllib.parse import unquote
+    sent = unquote(str(route.calls[0].request.url))
+    assert "selectedLocationsFacet=300000000228786" in sent and 'selectedFlexFieldsFacets="AttributeChar6|Technology"' in sent
+    assert jobs and all(j.url.startswith("https://careers.americanexpress.com/en/sites/CX_1/job/") for j in jobs)
+    # a job pasted from the company site resolves to the same job (same link), read through Oracle's host
+    r = registry.resolve_static(jobs[0].url)
+    assert r.adapter.ats == "oracle" and r.target.posting_id == jobs[0].ats_posting_id and r.target.board.config["host"] == "egug.fa.us2.oraclecloud.com"
+
+
+def test_a_company_domain_not_in_hosts_json_is_not_taken_for_oracle():
+    assert registry.board_from_url("https://careers.example.com/en/sites/CX_1/jobs") is None
 
 
 @respx.mock

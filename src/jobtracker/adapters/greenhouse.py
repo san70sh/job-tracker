@@ -13,6 +13,9 @@ HOSTS = {"boards.greenhouse.io", "job-boards.greenhouse.io", "job-boards.eu.gree
 _TOKEN_IN_PAGE = re.compile(r"(?:boards|job-boards)(?:\.eu)?\.greenhouse\.io/(?:embed/job_board(?:/js)?\?for=|embed/job_app\?for=)?([a-z0-9_-]+)", re.I)
 
 
+_EMBED_IN_PAGE = re.compile(r"greenhouse\.io/embed/(?:job_board(?:/js)?|job_app)\?for=([a-z0-9_-]+)", re.I)
+
+
 class Greenhouse(Adapter):
     ats = "greenhouse"
 
@@ -39,8 +42,16 @@ class Greenhouse(Adapter):
         p = urlsplit(url)
         segs = [s for s in p.path.split("/") if s]
         if (p.hostname or "").lower() in HOSTS and segs:
+            if segs[0] == "embed":  # an embed address names its board in ?for=
+                token = parse_qs(p.query).get("for", [None])[0]
+                return BoardRef("greenhouse", token) if token else None
             return BoardRef("greenhouse", segs[0])
         return None
+
+    def recognise(self, html: str, page_url: str) -> BoardRef | None:
+        """A company page that embeds a Greenhouse board (its script or frame says which one)."""
+        m = _EMBED_IN_PAGE.search(html)
+        return BoardRef("greenhouse", m.group(1)) if m else None
 
     async def fetch(self, target: Target, f: Fetcher) -> Posting:
         token = target.board.slug

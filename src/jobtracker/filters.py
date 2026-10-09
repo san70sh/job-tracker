@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterable
+from datetime import date, timedelta
 from functools import lru_cache
 
 from .extract.vocab import load_vocab
@@ -50,6 +51,11 @@ def validate(terms: Iterable[str]) -> None:
 
 def any_match(text: str | None, terms: Iterable[str], location: bool = False) -> bool:
     return any(compile_term(t, location).search(text or "") for t in terms)
+
+
+def is_recent(posted_at: date | None, max_age_days: int, today: date | None = None) -> bool:
+    """Posted within the last `max_age_days` days. A posting with no date is kept: it cannot be shown to be old."""
+    return posted_at is None or posted_at >= (today or date.today()) - timedelta(days=max_age_days)
 
 
 def passes(title: str, place: str | None, include: list[str], exclude: list[str], locations: list[str]) -> bool:

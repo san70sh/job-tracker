@@ -35,6 +35,12 @@ class Jibe(Adapter):
     def board_for_host(host: str, company: str | None = None) -> BoardRef:
         return BoardRef("jibe", host, company=company, config={"host": host})
 
+    def recognise(self, html: str, page_url: str) -> BoardRef | None:
+        host = (urlsplit(page_url).hostname or "").lower()
+        if host.endswith(".icims.com"):
+            return None  # iCIMS portals embed a Jibe widget but are served by iCIMS itself: /api/jobs does not exist there
+        return self.board_for_host(host) if host and looks_like_jibe(html) else None
+
     @staticmethod
     def posting_id_from_url(url: str) -> str | None:
         m = re.search(r"/jobs/([^/?#]+)", urlsplit(url).path)

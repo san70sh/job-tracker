@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import replace
+from datetime import date, timedelta
 from urllib.parse import parse_qs, urlsplit, urlunsplit
 
 from .. import filters
@@ -15,6 +16,21 @@ from ..models import BoardRef, ListedBatch, ListedPosting, Posting
 from .base import Adapter, Target, parse_date
 
 _LOCALE = re.compile(r"^[a-z]{2}(?:-[A-Z]{2})?$")
+
+
+# Workday's listing only says "Posted Today", "Posted Yesterday", "Posted 3 Days Ago" or "Posted 30+ Days Ago"
+_DAYS_AGO = re.compile(r"(\d+)\+?\s*days?\s+ago", re.I)
+_DAY_WORDS = {"today": 0, "yesterday": 1}
+
+
+def posted_on(text: str | None, today: date | None = None) -> date | None:
+    """The date behind Workday's 'Posted ...' text (for '30+ Days Ago', 30 days back: at least that old, so old either way)."""
+    today = today or date.today()
+    low = (text or "").lower()
+    m = _DAYS_AGO.search(low)
+    if m:
+        return today - timedelta(days=int(m.group(1)))
+    return next((today - timedelta(days=n) for word, n in _DAY_WORDS.items() if word in low), None)
 
 
 # address parameters that are not Workday filters ("q" is the search box; the rest is tracking)
@@ -142,7 +158,7 @@ class Workday(Adapter):
 
     async def list_postings(self, board: BoardRef, f: Fetcher) -> list[ListedPosting]:
         out: list[ListedPosting] = []
-        limit, total = 20, 0
+        limit, total, skipped = 20, 0, 0
         max_pages = int(board.config.get("max_pages", 10))
         search = board.config.get("search_text", "")
         for page in range(max_pages):
@@ -151,15 +167,19 @@ class Workday(Adapter):
                 {"appliedFacets": board.config.get("facets", {}), "limit": limit, "offset": page * limit, "searchText": search},
             )
             for j in d.get("jobPostings", []):
-                ext = j.get("externalPath", "")
+                if not j.get("title") or not j.get("externalPath"):
+                    skipped += 1  # Workday sometimes lists a bare requisition number: no title or page, so not a posting
+                    continue
+                ext = j["externalPath"]
                 req = (j.get("bulletFields") or [None])[0] or ext.rsplit("_", 1)[-1]
                 out.append(ListedPosting(
                     ats_posting_id=req,
                     url=f"https://{board.config['host']}/{board.config['site']}{ext}",
                     title=j["title"],
                     location=j.get("locationsText"),
+                    posted_at=posted_on(j.get("postedOn")),
                 ))
             total = d.get("total", 0)
             if (page + 1) * limit >= total or not d.get("jobPostings"):
                 break
-        return ListedBatch(out, complete=len(out) >= total)
+        return ListedBatch(out, complete=len(out) + skipped >= total)  # skipped ones are in Workday's total too

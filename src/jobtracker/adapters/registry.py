@@ -1,4 +1,5 @@
-"""Pick the adapter + target for a URL: hosts.json -> URL patterns -> HTML fingerprint -> generic."""
+"""Pick the adapter + target for a URL: hosts.json (and the domains discovery learned) -> URL patterns -> generic.
+What a page itself gives away is in discovery.py."""
 from __future__ import annotations
 
 import json
@@ -17,9 +18,10 @@ from .ashby import Ashby
 from .avature import Avature
 from .base import Adapter, Target
 from .eightfold import Eightfold
-from .generic import Generic, IcimsClassic
+from .generic import Generic
+from .icims import IcimsClassic
 from .greenhouse import Greenhouse
-from .jibe import Jibe, looks_like_jibe
+from .jibe import Jibe
 from .lever import Lever
 from .oracle import OracleHCM
 from .smartrecruiters import SmartRecruiters
@@ -35,10 +37,26 @@ def adapters() -> dict[str, Adapter]:
 
 
 @lru_cache
-def load_hosts() -> dict[str, dict]:
+def _file_hosts() -> dict[str, dict]:
     if not HOSTS_PATH.exists():
         return {}
     return {k.lower(): v for k, v in json.loads(HOSTS_PATH.read_text(encoding="utf-8")).items() if not k.startswith("_")}
+
+
+_learned: dict[str, dict] = {}  # domains discovery worked out (stored in the database); the file wins over them
+
+
+def load_hosts() -> dict[str, dict]:
+    return {**_learned, **_file_hosts()}
+
+
+def set_learned(entries: dict[str, dict]) -> None:
+    _learned.clear()
+    _learned.update({k.lower(): v for k, v in entries.items()})
+
+
+def learn(host: str, entry: dict) -> None:
+    _learned[host.lower()] = entry
 
 
 @dataclass
@@ -58,7 +76,7 @@ def _apply_entry(target: Target, entry: dict) -> Target:
 
 
 def resolve_static(url: str) -> Resolved | None:
-    """No-network resolution: hosts.json, then URL patterns."""
+    """No-network resolution: hosts.json (and learned domains), then URL patterns."""
     host = (urlsplit(url).hostname or "").lower()
     entry = load_hosts().get(host)
     reg = adapters()
@@ -86,20 +104,12 @@ async def resolve(url: str, f: Fetcher) -> Resolved:
     r = resolve_static(url)
     if r:
         return r
-    host = (urlsplit(url).hostname or "").lower()
-    reg = adapters()
     html = None
     try:
         html = await f.get_text(url)
     except Exception:
         html = None
-    if html and looks_like_jibe(html):
-        jibe = reg["jibe"]
-        pid = jibe.posting_id_from_url(url)  # type: ignore[attr-defined]
-        if pid:
-            return Resolved(jibe, Target(Jibe.board_for_host(host), pid, url, html))
-    gen = reg["html"]
-    return Resolved(gen, Target(BoardRef("html"), "", url, html))
+    return Resolved(adapters()["html"], Target(BoardRef("html"), "", url, html))
 
 
 def delegate_from_html(html: str, page_url: str) -> Resolved | None:

@@ -19,11 +19,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
-from .. import board_options, boards, db, migrate, notion_sync, pipeline, repo, suggestions, watcher
-from ..adapters import registry
+from .. import board_options, boards, db, migrate, notion_sync, pipeline, portals, repo, suggestions, watcher
 from ..config import get_settings
 from ..events import bus
+from ..http import Fetcher
 from ..extract.facts import location_tags
+from . import diagnostics
 from ..extract.pasted import link_job_ref
 
 log = logging.getLogger("jobtracker.web")
@@ -36,6 +37,7 @@ def _with(fn, *a, **kw):
 
 
 # ───────────────────────────── background jobs ─────────────────────────────
+@diagnostics.tracked("board poll")
 async def job_poll() -> None:
     try:
         await watcher.poll_due()
@@ -43,6 +45,7 @@ async def job_poll() -> None:
         log.exception("board poll failed")
 
 
+@diagnostics.tracked("notion push")
 async def job_notion() -> None:
     """Deliver queued Notion pushes (retries and backoff are handled by the outbox)."""
     if not notion_sync.configured():
@@ -53,6 +56,7 @@ async def job_notion() -> None:
         log.exception("notion outbox run failed")
 
 
+@diagnostics.tracked("purge")
 async def job_purge() -> None:
     """Daily: drop discovered postings that were added or have closed."""
     res = await asyncio.to_thread(lambda: _with(repo.purge_discovered))
@@ -60,6 +64,7 @@ async def job_purge() -> None:
         log.info("purged discovered postings: %s", res)
 
 
+@diagnostics.tracked("reminder")
 async def job_reminder() -> None:
     """Daily nudge for postings that have been waiting for a decision longer than REMINDER_AFTER_DAYS."""
     s = await asyncio.to_thread(lambda: _with(repo.pending_summary, get_settings().reminder_after_days))
@@ -79,6 +84,7 @@ async def lifespan(_app: FastAPI):
     sched.add_job(job_purge, "cron", hour=3, minute=30, id="purge")
     sched.add_job(job_reminder, "cron", hour=9, minute=0, id="reminder")
     sched.start()
+    heartbeat = diagnostics.start()
     loop = asyncio.get_running_loop()
     loop.call_later(20, lambda: asyncio.ensure_future(job_poll()))
     loop.call_later(30, lambda: asyncio.ensure_future(job_purge()))
@@ -86,11 +92,13 @@ async def lifespan(_app: FastAPI):
     try:
         yield
     finally:
+        heartbeat.cancel()
         sched.shutdown(wait=False)
         db.pool().close()
 
 
 app = FastAPI(title="Job Tracker", lifespan=lifespan)
+app.add_middleware(diagnostics.SlowRequests, slow_seconds=get_settings().slow_request_seconds)
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
 
 
@@ -438,19 +446,19 @@ BOARD_FIELDS = ("id", "ats", "board_url", "title_include", "title_exclude", "loc
                 "last_polled_at", "last_success_at", "last_error", "last_listed", "last_new", "new_count", "company_jobs", "company")
 
 
-def _new_board(url: str):
-    """(adapter, BoardRef) for an address, or a 422 naming what is supported."""
-    found = registry.board_from_url(url.strip())
-    if not found:
-        raise HTTPException(422, "Not a recognised board URL. Supported: Greenhouse, Lever, Ashby, SmartRecruiters, Workday, "
-                                 "Oracle Cloud, Eightfold, Amazon Jobs, Avature, and hosts listed in config/hosts.json.")
-    return found
+async def _new_board(url: str) -> portals.Found:
+    """The board an address stands for (by its address, else by what the page says), or a 422 saying what was tried."""
+    try:
+        async with Fetcher() as f:
+            return await portals.find_board(url.strip(), f)
+    except portals.NotFound as e:
+        raise HTTPException(422, str(e))
 
 
-def _board_row(url: str, filters_in: dict) -> dict:
+async def _board_row(url: str, filters_in: dict) -> dict:
     """A board that is not saved yet, shaped like a watched_boards row so the same code can list it."""
-    adapter, board = _new_board(url)
-    return {"ats": adapter.ats, "slug": board.slug, "company": board.company, "config": board.config, **filters_in}
+    found = await _new_board(url)
+    return {"ats": found.adapter.ats, "slug": found.board.slug, "company": found.board.company, "config": found.board.config, **filters_in}
 
 
 @app.get("/api/meta")
@@ -478,7 +486,8 @@ def api_board_suggestions():
 
 @app.post("/api/boards")
 async def add_board(body: NewBoard):
-    adapter, board = _new_board(body.url)
+    found = await _new_board(body.url)
+    adapter, board = found.adapter, found.board
     try:
         include, exclude, places = (boards.clean_terms(t) for t in (body.title_include, body.title_exclude, body.location_include))
     except ValueError as e:
@@ -490,7 +499,8 @@ async def add_board(body: NewBoard):
             location_include=places, interval_minutes=body.poll_interval_minutes))
     except psycopg.errors.InvalidTextRepresentation:  # the database predates this job system: it needs its migration
         raise HTTPException(503, f"The database does not know {adapter.ats} yet. Run scripts/db.ps1 apply, then try again.")
-    return {"id": bid, "company": company, "ats": adapter.ats, "created": created}
+    return {"id": bid, "company": company, "ats": adapter.ats, "created": created,
+            "found_by": None if found.how == portals.BY_ADDRESS else found.how}  # set only when the page had to be read
 
 
 @app.patch("/api/boards/{board_id}")
@@ -525,7 +535,7 @@ async def preview_board(body: BoardPreview):
             raise HTTPException(404)
         row = {**rows[0], **filters_in}
     elif body.url:
-        row = _board_row(body.url, filters_in)
+        row = await _board_row(body.url, filters_in)
     else:
         raise HTTPException(422, "Give a board_id or a url.")
     try:

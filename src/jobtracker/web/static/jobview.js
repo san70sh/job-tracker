@@ -4,6 +4,9 @@
 window.JobView = (() => {
   const EDIT = [["role", "Role"], ["company", "Company"], ["level", "Level"], ["location", "Location"], ["job_ref", "Job ID"],
                 ["experience_required", "Experience required"], ["team_domain", "Team / Domain"]];
+  // fields that can tag a job for review (the server decides which, see review_reasons), and what to say about each reason
+  const REVIEW_LABEL = {role: "Role", company: "Company", key_responsibilities: "Key responsibilities", requirements: "Requirements"};
+  const REVIEW_WHY = {not_found: "not found", not_sure: "not sure it is right"};
   let ROOT = null, ID = null, CUR = {}, MODE = "page", NAV = [];
   let modal = null, fromPop = false;  // fromPop: the close came from the Back button, so the history is already right
 
@@ -16,6 +19,9 @@ window.JobView = (() => {
   }
   function view(j) {
     const llm = j.provenance.filter(p => p.method === "llm").map(p => p.field);
+    const rv = Object.fromEntries((j.review || []).map(r => [r.field, r]));  // field -> why it needs a look
+    const why = k => rv[k] ? ` <span class="why">${REVIEW_WHY[rv[k].reason]}</span>` : "";
+    const cls = k => rv[k] ? ' class="review"' : "";
     const pos = NAV.findIndex(n => n.id === ID);
     const inModal = MODE === "modal", many = inModal && NAV.length > 1 && pos >= 0, flagged = inModal && NAV.some(n => n.review && n.id !== ID);
     const opts = ["", ...META.statuses.map(s => s.name)].map(o => `<option ${o === (j.status || "") ? "selected" : ""}>${esc(o)}</option>`).join("");
@@ -29,20 +35,21 @@ window.JobView = (() => {
         <div class="muted">${esc(j.company)}${j.job_link ? ` · <a href="${esc(j.job_link)}" target="_blank" rel="noopener">posting</a>` : ""}${j.via_url ? ` · <a href="${esc(j.via_url)}" target="_blank" rel="noopener">careers page</a>` : ""} · ${j.ats === "manual" ? "added from pasted text" : esc(j.ats)}${j.closed_at ? " · closed " + j.closed_at : ""}</div>
         <div class="jv-pills">${statusPill(colOf(j))} ${modePill(j.work_mode)}</div></div>${tools}</div>
       <div class="jv-scroll">
-        ${j.needs_review ? `<div class="jv-review"><span>Some fields could not be extracted reliably (or were filled by the LLM). Check them, then mark this reviewed.
-            Saving edits that fill every required field also clears this.</span><button class="ghost" data-act="reviewed">Mark reviewed</button></div>` : ""}
+        ${j.needs_review ? `<div class="jv-review"><span>${j.review.length
+            ? "Check " + j.review.map(r => `<b>${REVIEW_LABEL[r.field]}</b> (${REVIEW_WHY[r.reason]})`).join(", ") + ". Fix what is wrong and save, or mark it reviewed if it is fine."
+            : "Marked for a check. Mark it reviewed once you have looked."}</span><button class="ghost" data-act="reviewed">Mark reviewed</button></div>` : ""}
         ${llm.length ? `<p class="muted">Filled by the LLM fallback: ${llm.map(esc).join(", ")}</p>` : ""}
         <div class="layout"><div class="stack">
           <div class="card">
-            <div class="two">${EDIT.map(([k, l]) => `<div><label>${l}</label><input type="text" data-f="${k}" value="${esc(j[k])}"></div>`).join("")}
+            <div class="two">${EDIT.map(([k, l]) => `<div><label>${l}${why(k)}</label><input type="text" data-f="${k}"${cls(k)} value="${esc(j[k])}"></div>`).join("")}
               <div><label>Work mode</label><select data-f="work_mode"><option value=""></option>${["Onsite", "Hybrid", "Remote"].map(o => `<option ${o === j.work_mode ? "selected" : ""}>${o}</option>`).join("")}</select></div>
               <div><label>Date applied</label><input type="date" data-f="date_applied" value="${j.date_applied || ""}"></div>
               <div><label>Salary min (LPA)</label><input type="number" step="0.1" data-f="salary_min_lpa" value="${j.salary_min_lpa ?? ""}"></div>
               <div><label>Salary max (LPA)</label><input type="number" step="0.1" data-f="salary_max_lpa" value="${j.salary_max_lpa ?? ""}"></div></div>
             <label>Salary details</label><textarea data-f="salary_details" style="min-height:60px">${esc(j.salary_details)}</textarea>
             <label>Notes</label><textarea data-f="notes">${esc(j.notes)}</textarea>
-            <label>Key responsibilities</label><textarea data-f="key_responsibilities">${esc(j.key_responsibilities)}</textarea>
-            <label>Requirements</label><textarea data-f="requirements">${esc(j.requirements)}</textarea>
+            <label>Key responsibilities${why("key_responsibilities")}</label><textarea data-f="key_responsibilities"${cls("key_responsibilities")}>${esc(j.key_responsibilities)}</textarea>
+            <label>Requirements${why("requirements")}</label><textarea data-f="requirements"${cls("requirements")}>${esc(j.requirements)}</textarea>
           </div>
           <div class="card"><h3 style="margin:0">Posting</h3>${j.sections.map(secHtml).join("") || '<p class="muted">No sections stored.</p>'}</div>
         </div><div class="stack">
@@ -192,5 +199,5 @@ window.JobView = (() => {
     bind(); await load();
   }
 
-  return {open, page, isOpen: () => !!modal && modal.isOpen()};
+  return {open, page, isOpen: () => !!modal && modal.isOpen(), reviewLabel: f => REVIEW_LABEL[f] || f};
 })();
