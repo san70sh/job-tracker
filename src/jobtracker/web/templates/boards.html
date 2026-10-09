@@ -3,8 +3,9 @@
   table.boards { width:100%; border-collapse:collapse; table-layout:fixed; }
   table.boards th, table.boards td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--line); vertical-align:middle; overflow-wrap:anywhere; }
   table.boards th { color:var(--muted); font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
-  .c-company { width:17%; font-weight:600; } .c-source { width:25%; } .c-filters { width:20%; } .c-status { width:20%; } .c-act { width:18%; text-align:right; white-space:nowrap; }
-  .c-act button { padding:4px 10px; margin-left:4px; }
+  .c-company { width:15%; font-weight:600; } .c-source { width:23%; } .c-filters { width:19%; } .c-status { width:19%; } .c-act { width:24%; }
+  .acts { display:flex; flex-wrap:wrap; gap:4px; justify-content:flex-end; }  /* four buttons wrap instead of running off the page */
+  .acts button { padding:4px 10px; }
   .src { display:flex; align-items:center; gap:8px; min-width:0; }
   .src a { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--accent); text-decoration:none; }
   .src a:hover { text-decoration:underline; }
@@ -92,9 +93,9 @@ function filterSummary(b) {
   return c.length ? `<div class="chips-row">${c.join("")}</div>` : '<span class="muted">none</span>';
 }
 function statusCell(b) {
-  const stale = b.last_success_at && (Date.now() - new Date(b.last_success_at)) > META.stale_after_hours * 3600e3;
+  const stale = b.enabled && b.last_success_at && (Date.now() - new Date(b.last_success_at)) > META.stale_after_hours * 3600e3;
   const parts = [];
-  if (!b.enabled) parts.push('<span class="pill" data-c="gray">Paused</span>');
+  if (!b.enabled) parts.push('<span class="pill" data-c="gray">Paused</span> <span class="muted">not checked until resumed</span>');
   if (b.last_error) parts.push(`<div class="status-err" title="${esc(b.last_error)}">Failed ${ago(b.last_polled_at)}: ${esc(b.last_error.slice(0, 70))}</div>`);
   else if (b.last_success_at) {
     const listed = b.last_listed == null ? "" : `${b.last_listed} listed · `;  // unknown until the first check after the upgrade
@@ -113,12 +114,21 @@ window.reload = async function () {
       <a href="${esc(b.board_url)}" target="_blank" rel="noopener" title="${esc(b.board_url)}">${esc(shortUrl(b.board_url))}</a></div></td>
     <td class="c-filters">${filterSummary(b)}</td>
     <td class="c-status">${statusCell(b)}</td>
-    <td class="c-act"><button class="ghost" data-edit="${b.id}">Edit</button><button class="ghost" data-check="${b.id}">Check now</button><button class="danger" data-del="${b.id}">Remove</button></td></tr>`).join("")
+    <td class="c-act"><div class="acts"><button class="ghost" data-edit="${b.id}">Edit</button><button class="ghost" data-pause="${b.id}" title="${b.enabled ? "Stop checking this board until you resume it" : "Start checking this board again"}">${b.enabled ? "Pause" : "Resume"}</button><button class="ghost" data-check="${b.id}">Check now</button><button class="danger" data-del="${b.id}">Remove</button></div></td></tr>`).join("")
     || '<tr><td colspan="5" class="muted">No boards yet.</td></tr>';
 };
 $("#rows").addEventListener("click", async e => {
   const b = e.target.closest("button"); if (!b) return;
   if (b.dataset.edit) return editBoard(+b.dataset.edit);
+  if (b.dataset.pause) {  // one click: pause, or resume what was paused
+    const board = BOARDS.find(x => x.id === +b.dataset.pause);
+    b.disabled = true;
+    try {
+      await api(`/api/boards/${board.id}`, {method: "PATCH", body: {enabled: !board.enabled}});
+      toast(board.enabled ? `Paused ${esc(board.company)}: it is not checked until you resume it` : `Resumed ${esc(board.company)}`);
+    } catch (err) { toast(esc(err.message), "err"); }
+    return window.reload();
+  }
   if (b.dataset.check) {
     b.disabled = true; b.textContent = "Checking…";
     try { const r = await api(`/api/boards/${b.dataset.check}/poll`, {method: "POST"}); toast(r.new ? `${r.new} new posting(s)` : "Checked: nothing new"); }
