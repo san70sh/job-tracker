@@ -10,12 +10,12 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlsplit
 
-from . import PARSER_VERSION, db, repo
+from . import PARSER_VERSION, db, portals, repo
 from .adapters import registry
 from .adapters.base import NeedsFallback, Target
 from .adapters.generic import parse_html
 from .extract.facts import find_req_id, parse_experience
-from .extract.job import apply_salary, extract, missing_fields
+from .extract.job import REVIEW_FIELDS, apply_salary, extract, missing_fields, review_reasons
 from .extract.pasted import Parsed, canonical_key, parse_pasted
 from .extract.sections import bullets_of, split_sections
 from .extract.text import blocks_to_text, html_to_blocks
@@ -36,6 +36,7 @@ class IngestResult:
     needs_review: bool = False
     missing: list[str] | None = None
     ats: str | None = None
+    review: list[str] | None = None  # which fields need a look when needs_review is set
 
     def as_dict(self) -> dict[str, Any]:
         return self.__dict__
@@ -51,8 +52,17 @@ def _db(fn, *a, **kw):
 async def fetch_posting(url: str, f: Fetcher) -> tuple[Posting, str]:
     """Resolve the adapter and fetch. Falls back to the generic parser if a structured source fails.
     Returns (posting, how) where `how` notes any degradation."""
+    await portals.ensure_loaded()
     resolved = await registry.resolve(url, f)
     how = resolved.adapter.ats
+    if how == "html" and resolved.target.html and (page := portals.resolve_from_page(url, resolved.target.html)):
+        known, host, entry = page  # the page is a supported system's own front end (a company domain in front of it)
+        try:
+            posting = await known.adapter.fetch(known.target, f)
+            await portals.remember(host, entry, "a pasted job page that is the system's own front end")
+            return posting, known.adapter.ats
+        except (PostingGone, NeedsFallback, *BOARD_ERRORS) as e:
+            log.warning("%s looked like %s but reading it there failed (%s); reading the page itself", url, known.adapter.ats, e)
     if how == "html" and resolved.target.html and (inner := registry.delegate_from_html(resolved.target.html, url)):
         try:  # the careers page only displays the job: read it from the system behind it (structured, and the same address the watcher finds)
             posting = await inner.adapter.fetch(inner.target, f)
@@ -146,7 +156,8 @@ async def store_posting(posting: Posting, *, canonical: str, snapshot: str, stag
         if llm.available:
             llm_ids = await asyncio.to_thread(llm.fill, ex, missing, description)
             missing = missing_fields(ex)
-    needs_review = any(m in missing for m in ("role", "company", "key_responsibilities", "requirements"))
+    review = review_reasons({n: ex.get(n) for n in REVIEW_FIELDS}, {n: (fv.method, fv.confidence) for n, fv in ex.fields.items()})
+    needs_review = bool(review)
 
     def persist(c):
         cid = repo.upsert_company(c, company, posting.ats if posting.ats not in ("html", "icims", "manual") else None)
@@ -156,7 +167,7 @@ async def store_posting(posting: Posting, *, canonical: str, snapshot: str, stag
         jid = repo.save_job(c, ex, canonical=canonical, company_id=cid, snapshot_body=snapshot,
                             parser_version=PARSER_VERSION, salary=salary, needs_review=needs_review, stage=stage,
                             llm_call_ids=llm_ids)
-        return IngestResult("created", f"{ex.get('role')} @ {company}", jid, needs_review, missing, posting.ats)
+        return IngestResult("created", f"{ex.get('role')} @ {company}", jid, needs_review, missing, posting.ats, list(review))
 
     return await _db(persist)
 

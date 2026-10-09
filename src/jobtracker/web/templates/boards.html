@@ -77,7 +77,8 @@ async function showPreview(out, body) {
   out.innerHTML = '<span class="muted">Checking the board…</span>';
   try {
     const r = await api("/api/boards/preview", {method: "POST", body});
-    out.innerHTML = `<b>${r.matched}</b> of ${r.listed} open postings match${r.complete ? "" : " (the board is longer than one check reads)"}.
+    out.innerHTML = `<b>${r.recent}</b> of ${r.listed} open postings match and were posted in the last ${r.max_age_days} days${r.complete ? "" : " (the board is longer than one check reads)"}.
+      <div class="muted">${r.matched} match the filters alone; postings with no posted date are always counted.</div>
       ${r.narrowed_at_source ? '<div class="muted">Places are matched against the office list of the job system itself, so roles in several offices are included.</div>' : ""}
       ${r.sample.length ? `<ul>${r.sample.map(p => `<li>${esc(p.title)} <span class="muted">${esc(p.location || "")}</span></li>`).join("")}</ul>` : ""}`;
   } catch (e) { out.innerHTML = `<span class="status-err">${esc(e.message)}</span>`; }
@@ -176,12 +177,15 @@ function setupAddForm() {
   });
   $("#bf").addEventListener("submit", async e => {
     e.preventDefault();
+    const go = e.submitter, label = go.textContent;
+    go.disabled = true; go.textContent = "Looking at the site…";  // an unfamiliar careers site is opened and read first
     try {
       const r = await api("/api/boards", {method: "POST", body: body()});
       if (!r.created) { toast(`Already watching ${esc(r.company)}: opened it for editing`); await window.reload(); return editBoard(r.id); }
-      toast(`Watching ${esc(r.company)} (${esc(r.ats)})`);
+      toast(`Watching ${esc(r.company)} (${esc(r.ats)})${r.found_by ? ` · found from ${esc(r.found_by)}` : ""}`);
       e.target.reset(); $("#b-pv").innerHTML = ""; setupAddForm(); window.reload();
     } catch (err) { toast(esc(err.message), "err"); }
+    finally { go.disabled = false; go.textContent = label; }
   });
 }
 (async () => {

@@ -75,7 +75,7 @@ async function addUrl(url) {
   try {
     const r = await api("/api/jobs", {method:"POST", body:{url, applied:$("#applied").checked}});
     if (r.status === "duplicate") toast(`Already tracked: <a href="/jobs/${r.job_id}">${esc(r.message)}</a>`);
-    else { toast(`Added <a href="/jobs/${r.job_id}">${esc(r.message)}</a>${r.needs_review ? " — needs a quick review" : ""}`); src.value = ""; grow(); loadRecent(); }
+    else { toast(`Added <a href="/jobs/${r.job_id}">${esc(r.message)}</a>${r.needs_review ? ` — check ${(r.review || []).map(JobView.reviewLabel).join(", ") || "a few fields"}` : ""}`); src.value = ""; grow(); loadRecent(); }
   } catch (err) {
     if (err.data && err.data.status === "needs_text") {
       pendingLink = url; forced = "text"; src.value = ""; grow();

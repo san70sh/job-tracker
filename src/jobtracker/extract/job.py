@@ -1,6 +1,9 @@
 """Posting -> ExtractedJob: every deterministic extractor, wired together."""
 from __future__ import annotations
 
+from collections.abc import Mapping
+from typing import Any
+
 from ..config import get_settings
 from ..models import ExtractedJob, Posting, Section
 from .facts import (
@@ -21,6 +24,9 @@ from .vocab import Vocab, load_vocab
 # Fields the pipeline expects; anything missing after extraction is a candidate for the LLM fallback.
 REQUIRED_FIELDS = ("role", "company", "location", "key_responsibilities", "requirements")
 FALLBACK_FIELDS = REQUIRED_FIELDS + ("work_mode", "level", "experience_required", "team_domain")
+# A job is tagged for review when one of these is missing or weak after extraction (location and the soft fields never tag it).
+REVIEW_FIELDS = ("role", "company", "key_responsibilities", "requirements")
+NOT_FOUND, NOT_SURE = "not_found", "not_sure"  # why a field needs a look
 
 
 def build_sections(posting: Posting) -> list[Section]:
@@ -133,6 +139,22 @@ def missing_fields(ex: ExtractedJob, threshold: float | None = None) -> list[str
         return []
     soft = [n for n in FALLBACK_FIELDS if n not in REQUIRED_FIELDS and n not in ex.fields]
     return hard + soft
+
+
+def review_reasons(values: Mapping[str, Any], provenance: Mapping[str, tuple[str, float]], threshold: float | None = None) -> dict[str, str]:
+    """The fields that need a look, with the reason: empty (NOT_FOUND) or read with low confidence (NOT_SURE).
+    `provenance` maps a field to (method, confidence). A field you typed or confirmed (method 'manual') is settled
+    unless it is empty. A field with a value and no provenance (imported jobs) is taken as fine."""
+    t = threshold if threshold is not None else get_settings().confidence_threshold
+    out: dict[str, str] = {}
+    for name in REVIEW_FIELDS:
+        value = values.get(name)
+        method, confidence = provenance.get(name, (None, None))
+        if value is None or not str(value).strip():
+            out[name] = NOT_FOUND
+        elif method != "manual" and confidence is not None and confidence < t:
+            out[name] = NOT_SURE
+    return out
 
 
 def render_body(ex: ExtractedJob, company_about: str | None = None) -> str:

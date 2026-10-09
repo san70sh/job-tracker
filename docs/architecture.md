@@ -274,6 +274,9 @@ Tables not shown: `status_transitions` (allowed moves), `intake_queue` (unused, 
 | `src/jobtracker/migrate.py` | tracked, forward-only migrations: baseline on an empty database, then pending `db/migrations/*.sql` |
 | `src/jobtracker/filters.py` | one reading of a board filter term (plain words, `/regex/`, city spellings); used by the watcher, the preview and Workday |
 | `src/jobtracker/boards.py`, `suggestions.py`, `board_options.py` | editing and previewing boards; filter suggestions from applied jobs; the options in `config/boards.json` |
+| `src/jobtracker/adapters/discovery.py` | reads an unfamiliar careers page and says which supported job system is behind it (redirects, the page being the system's front end, scripts/frames, links, one job page); no probing |
+| `src/jobtracker/portals.py` | ties discovery to the database: loads and remembers learned career domains (`portal_hosts`), checks a found system really lists jobs |
+| `src/jobtracker/web/diagnostics.py` | lag recorder: writes `logs/diagnostics.log` only when the event loop is stuck (with the stuck code's stack), a request or background job is slow, or the database pool is busy; limits are `SLOW_REQUEST_SECONDS` and `LOOP_STALL_SECONDS` in `.env` |
 | `src/jobtracker/reparse.py` | rebuild a posting from a job's saved snapshot and re-extract it (`reparse` command) |
 | `src/jobtracker/extract/team.py` | team / domain from labels, sentences and title suffixes |
 | `src/jobtracker/llm.py` | optional fallback with validation and caching |

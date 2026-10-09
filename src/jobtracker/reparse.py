@@ -12,7 +12,7 @@ from typing import Any
 
 from . import repo
 from .adapters import registry
-from .extract.job import extract, missing_fields
+from .extract.job import REVIEW_FIELDS, extract, missing_fields
 from .extract.pasted import parse_pasted
 from .models import ExtractedJob, Posting
 
@@ -126,6 +126,6 @@ def reparse_jobs(c, *, dry_run: bool = True, job_id: str | None = None) -> list[
         item["status"] = "would update" if dry_run else "updated"
         if not dry_run:
             clear_review = job["needs_review"] and not any(
-                m in missing_fields(ex) for m in ("role", "company", "key_responsibilities", "requirements"))
+                m in missing_fields(ex) for m in REVIEW_FIELDS)
             repo.apply_reparse(c, job["id"], plan, ex, clear_review=clear_review)
     return out

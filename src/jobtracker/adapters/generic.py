@@ -1,6 +1,6 @@
 """P4 generic fallback: JSON-LD JobPosting, else best-effort main-content HTML.
 
-Also used for classic iCIMS portals, whose job pages carry JSON-LD.
+Also used by iCIMS (icims.py), whose job pages carry JSON-LD.
 """
 from __future__ import annotations
 
@@ -155,25 +155,3 @@ class Generic(Adapter):
     async def fetch(self, target: Target, f: Fetcher) -> Posting:
         html = await f.get_text(target.url)
         return parse_html(html, target.url, "html", target.board.company)
-
-
-class IcimsClassic(Adapter):
-    """Classic iCIMS portal job page (JSON-LD). Listing is not supported (HTML + iframe, no stable API)."""
-
-    ats = "icims"
-
-    def identify(self, url: str) -> Target | None:
-        p = urlsplit(url)
-        host = (p.hostname or "").lower()
-        m = re.match(r"^/jobs/(\d+)(?:/|$)", p.path)
-        if host.endswith(".icims.com") and m:
-            return Target(BoardRef("icims", host, config={"host": host}), m.group(1), url)
-        return None
-
-    async def fetch(self, target: Target, f: Fetcher) -> Posting:
-        sep = "&" if "?" in target.url else "?"
-        html = await f.get_text(f"{target.url}{sep}in_iframe=1")
-        post = parse_html(html, target.url, "icims", target.board.company)
-        post.ats_posting_id = post.ats_posting_id or target.posting_id
-        post.job_ref = post.job_ref or target.posting_id
-        return post

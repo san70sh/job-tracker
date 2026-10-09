@@ -143,14 +143,19 @@ def cmd_poll(a) -> int:
 
 
 def cmd_add_board(a) -> int:
-    from . import boards, db, repo
-    from .adapters import registry
+    from . import boards, db, portals, repo
+    from .http import Fetcher
 
-    found = registry.board_from_url(a.url)
-    if not found:
-        print("Could not recognise this URL as a supported board. See docs/extraction-pathways.md.", file=sys.stderr)
+    async def find():
+        async with Fetcher() as f:
+            return await portals.find_board(a.url, f)
+
+    try:
+        found = asyncio.run(find())
+    except portals.NotFound as e:
+        print(f"error: {e}", file=sys.stderr)
         return 1
-    adapter, board = found
+    adapter, board = found.adapter, found.board
     company = a.company or board.company or (board.slug or "").title()
     try:
         include, exclude, places = (boards.clean_terms(t) for t in (a.include, a.exclude, a.location))

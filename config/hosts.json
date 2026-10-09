@@ -1,13 +1,15 @@
 {
-  "_comment": "Hosts the URL alone cannot identify. Keyed by exact hostname. ats: greenhouse|lever|ashby|smartrecruiters|workday|oracle|eightfold|jibe|avature|icims. For avature add \"config\": {\"base\": \"https://host/en_US/careers\"}. 'company' overrides the display name; 'slug'/'config' feed the adapter (see docs/extraction-pathways.md).",
+  "_comment": "Hosts the URL alone cannot identify. Keyed by exact hostname. ats: greenhouse|lever|ashby|smartrecruiters|workday|oracle|eightfold|jibe|avature|icims. For avature add \"config\": {\"base\": \"https://host/en_US/careers\"}. For a company domain in front of Oracle HCM add \"config\": {\"host\": \"<tenant>.fa.<region>.oraclecloud.com\"}. 'company' overrides the display name; 'slug'/'config' feed the adapter (see docs/extraction-pathways.md).",
   "careers.servicenow.com": {"ats": "smartrecruiters", "slug": "ServiceNow", "company": "ServiceNow"},
   "stripe.com": {"ats": "greenhouse", "slug": "stripe", "company": "Stripe"},
+  "www.crunchyroll.com": {"ats": "greenhouse", "slug": "crunchyroll", "company": "Crunchyroll"},
   "apply.careers.microsoft.com": {"ats": "eightfold", "company": "Microsoft", "config": {"host": "apply.careers.microsoft.com", "domain": "microsoft.com"}},
   "paypal.eightfold.ai": {"ats": "eightfold", "company": "PayPal", "config": {"domain": "paypal.com"}},
   "careers.docusign.com": {"ats": "jibe", "company": "DocuSign", "config": {"host": "careers.docusign.com"}},
   "uscareers-docusign.icims.com": {"ats": "icims", "company": "DocuSign"},
   "jpmc.fa.oraclecloud.com": {"ats": "oracle", "company": "JPMorgan Chase"},
   "egug.fa.us2.oraclecloud.com": {"ats": "oracle", "company": "American Express"},
+  "careers.americanexpress.com": {"ats": "oracle", "company": "American Express", "config": {"host": "egug.fa.us2.oraclecloud.com"}},
   "nvidia.wd5.myworkdayjobs.com": {"ats": "workday", "company": "NVIDIA"},
   "walmart.wd5.myworkdayjobs.com": {"ats": "workday", "company": "Walmart"},
   "rbs.wd3.myworkdayjobs.com": {"ats": "workday", "company": "NatWest Group"}

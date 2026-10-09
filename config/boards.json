@@ -1,5 +1,5 @@
 {
-  "_comment": "Options for the Company boards page. poll_intervals: choices in the edit form (the default itself lives in the database column). suggestions: how many options show first, and the word lists behind the title filters.",
+  "_comment": "Options for the Company boards page. poll_intervals: choices in the edit form (the default itself lives in the database column). max_age_days: postings older than this are not announced (ones with no posted date are kept). suggestions: how many options show first, and the word lists behind the title filters.",
   "poll_intervals": [
     {"minutes": 60, "label": "Every hour"},
     {"minutes": 180, "label": "Every 3 hours"},
@@ -7,6 +7,8 @@
     {"minutes": 1440, "label": "Daily"}
   ],
   "stale_after_hours": 24,
+  "max_age_days": 2,
+  "country_names": {"IN": "India", "US": "United States", "GB": "United Kingdom", "CA": "Canada", "DE": "Germany", "FR": "France", "IE": "Ireland", "NL": "Netherlands", "ES": "Spain", "IT": "Italy", "SE": "Sweden", "CH": "Switzerland", "PL": "Poland", "SG": "Singapore", "AU": "Australia", "JP": "Japan", "CN": "China", "HK": "Hong Kong", "AE": "United Arab Emirates", "MX": "Mexico", "BR": "Brazil", "PH": "Philippines", "MY": "Malaysia", "IL": "Israel"},
   "ats_colours": {"greenhouse": "green", "lever": "blue", "ashby": "purple", "smartrecruiters": "teal", "workday": "amber", "oracle": "red",
                   "eightfold": "coral", "amazon": "gray", "jibe": "blue", "avature": "purple", "icims": "gray"},
   "suggestions": {

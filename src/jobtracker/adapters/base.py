@@ -67,6 +67,17 @@ class Adapter(ABC):
         t = self.identify(url)
         return t.board if t else None
 
+    def recognise(self, html: str, page_url: str) -> BoardRef | None:
+        """Spot this system from a page's own content, for company domains that front it (the address says nothing).
+        Only for pages that ARE this system's front end; a mere link to it belongs to address recognition. Default: no."""
+        return None
+
+    def host_entry(self, board: BoardRef) -> dict:
+        """The config/hosts.json entry that would resolve this board's company domain later; what discovery remembers.
+        Address-only settings (the filters in a pasted URL) are left out, they belong to one address, not the domain."""
+        return {"ats": self.ats, "slug": board.slug, "company": board.company,
+                "config": {k: v for k, v in board.config.items() if k != "facets"}}
+
 
 def parse_date(value: str | int | float | None) -> date | None:
     if value in (None, ""):

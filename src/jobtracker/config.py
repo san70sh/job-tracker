@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     confidence_threshold: float = 0.8
     reminder_after_days: int = 2  # discovered postings undecided for longer than this trigger the reminder banner
 
+    # Lag diagnostics (logs/diagnostics.log): a request or background job slower than this, or an event-loop gap longer than the other
+    slow_request_seconds: float = 1.0
+    loop_stall_seconds: float = 0.5
+
     # LLM fallback (optional; pipeline works without it)
     anthropic_api_key: str | None = None
     llm_model: str = "claude-haiku-4-5"  # bulk extraction fallback; override in .env if you want a stronger model

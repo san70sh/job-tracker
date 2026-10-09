@@ -62,7 +62,10 @@ async def preview(row: dict, f: Fetcher | None = None) -> dict[str, Any]:
     finally:
         if own:
             await f.aclose()
-    kept = [p for p in listed if filters.passes(p.title, p.location, effective["title_include"], effective["title_exclude"],
-                                                 effective["location_include"])]
-    return {"listed": len(listed), "matched": len(kept), "complete": getattr(listed, "complete", True),
-            "narrowed_at_source": effective is not row, "sample": [{"title": p.title, "location": p.location} for p in kept[:SAMPLE]]}
+    max_age = board_options.max_age_days()
+    matching = [p for p in listed if filters.passes(p.title, p.location, effective["title_include"], effective["title_exclude"],
+                                                     effective["location_include"])]
+    kept = [p for p in matching if filters.is_recent(p.posted_at, max_age)]  # what would be announced
+    return {"listed": len(listed), "matched": len(matching), "recent": len(kept), "max_age_days": max_age,
+            "complete": getattr(listed, "complete", True), "narrowed_at_source": effective is not row,
+            "sample": [{"title": p.title, "location": p.location} for p in kept[:SAMPLE]]}

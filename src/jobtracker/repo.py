@@ -10,7 +10,8 @@ from typing import Any
 import psycopg
 from psycopg.types.json import Jsonb
 
-from . import filters
+from . import board_options, filters
+from .extract.job import review_reasons
 from .extract.salary import Benchmark, SalaryResult
 from .extract.vocab import load_vocab
 from .models import IDENTITY_KEYS, BoardRef, ExtractedJob, ListedPosting
@@ -303,11 +304,10 @@ def update_job(c: psycopg.Connection, job_id: str, **fields: Any) -> list[str]:
                    AND NOT EXISTS (SELECT 1 FROM jobs WHERE company_id = companies.id)
                    AND NOT EXISTS (SELECT 1 FROM watched_boards WHERE company_id = companies.id)
                    AND NOT EXISTS (SELECT 1 FROM salary_benchmarks WHERE company_id = companies.id)""", (old_company_id,))
-        # the review flag clears itself once every hard field has content
-        cur.execute(
-            """UPDATE jobs SET needs_review = NOT (role <> '' AND COALESCE(key_responsibilities,'') <> ''
-                                                  AND COALESCE(requirements,'') <> '') WHERE id = %s""", (job_id,))
         _enqueue_notion(cur, job_id)
+    if review_of(get_job(c, job_id), flagged_only=False) == []:  # the tag clears once every field that was flagged is settled
+        with c.cursor() as cur:
+            cur.execute("UPDATE jobs SET needs_review = false WHERE id = %s", (job_id,))
     c.commit()
     return list(changed)
 
@@ -580,6 +580,16 @@ def list_jobs(c: psycopg.Connection, stage: str | None = None) -> list[dict]:
         return cur.fetchall()
 
 
+def review_of(job: dict, flagged_only: bool = True) -> list[dict]:
+    """The fields of a job that need a look and why: [{field, reason, method, confidence}]. Empty for a job that is
+    not tagged (`flagged_only`), so callers can show the list as it is."""
+    if flagged_only and not job["needs_review"]:
+        return []
+    prov = {p["field"]: (p["method"], float(p["confidence"])) for p in job["provenance"]}
+    return [{"field": f, "reason": why, "method": prov.get(f, (None, None))[0], "confidence": prov.get(f, (None, None))[1]}
+            for f, why in review_reasons(job, prov).items()]
+
+
 def get_job(c: psycopg.Connection, job_id: str) -> dict | None:
     with c.cursor() as cur:
         cur.execute(
@@ -602,6 +612,7 @@ def get_job(c: psycopg.Connection, job_id: str) -> dict | None:
         job["via_url"] = snap["via"] if snap else None
         cur.execute("SELECT field, method, confidence FROM field_provenance WHERE job_id = %s ORDER BY field", (job_id,))
         job["provenance"] = cur.fetchall()
+        job["review"] = review_of(job)
         return job
 
 
@@ -616,6 +627,22 @@ def funnel(c: psycopg.Connection) -> list[dict]:
     with c.cursor() as cur:
         cur.execute("SELECT status::text AS status, jobs FROM v_funnel")
         return cur.fetchall()
+
+
+# ───────────────────────────── career domains learned by discovery ─────────────────────────────
+def load_portal_hosts(c: psycopg.Connection) -> dict[str, dict]:
+    """host -> entry (same shape as config/hosts.json) for every career domain discovery has worked out."""
+    with c.cursor() as cur:
+        cur.execute("SELECT host, entry FROM portal_hosts")
+        return {r["host"]: r["entry"] for r in cur.fetchall()}
+
+
+def save_portal_host(c: psycopg.Connection, host: str, entry: dict, evidence: str) -> None:
+    with c.cursor() as cur:
+        cur.execute("INSERT INTO portal_hosts (host, entry, evidence) VALUES (%s,%s,%s) "
+                    "ON CONFLICT (host) DO UPDATE SET entry = EXCLUDED.entry, evidence = EXCLUDED.evidence, learned_at = now()",
+                    (host.lower(), Jsonb(entry), evidence))
+    c.commit()
 
 
 # ───────────────────────────── watched boards + discovery ─────────────────────────────
@@ -724,15 +751,17 @@ def rename_company(c: psycopg.Connection, company_id: str, new_name: str) -> int
 
 def refilter_pending(c: psycopg.Connection, board_id: int) -> dict[str, int]:
     """After a filter edit: postings waiting for a decision that no longer match leave the Inbox ('filtered'); ones
-    that now match come back as 'seen' (visible, no popup). Silent baseline rows are left alone."""
+    that now match come back as 'seen' (visible, no popup) unless they are past the age limit. Waiting postings are
+    never hidden for age (they may simply have waited), and silent baseline rows are left alone."""
     moved = {"hidden": 0, "restored": 0}
     with c.cursor() as cur:
         cur.execute("SELECT title_include, title_exclude, location_include FROM watched_boards WHERE id = %s", (board_id,))
         f = cur.fetchone()
-        cur.execute("SELECT id, title, location, state FROM discovered_postings WHERE board_id = %s AND state IN ('new', 'seen', 'filtered')", (board_id,))
+        cur.execute("SELECT id, title, location, posted_at, state FROM discovered_postings WHERE board_id = %s AND state IN ('new', 'seen', 'filtered')", (board_id,))
+        max_age = board_options.max_age_days()
         for r in cur.fetchall():
             ok = filters.passes(r["title"], r["location"], f["title_include"], f["title_exclude"], f["location_include"])
-            if ok and r["state"] == "filtered":
+            if ok and r["state"] == "filtered" and filters.is_recent(r["posted_at"], max_age):
                 cur.execute("UPDATE discovered_postings SET state = 'seen' WHERE id = %s", (r["id"],))
                 moved["restored"] += 1
             elif not ok and r["state"] != "filtered":
@@ -754,7 +783,8 @@ def record_poll(c: psycopg.Connection, board: dict, listed: list[ListedPosting])
 
     - First good check of an unfiltered board: everything already open is 'baseline' (silent), so a 400-job board
       does not flood the popup. With a title filter, matching postings are 'new' straight away.
-    - Postings failing the board's filters are stored as 'filtered' (silent) so they are not re-evaluated.
+    - Postings failing the board's filters, or posted longer ago than the age limit, are stored as 'filtered' (silent)
+      so they are not re-evaluated.
     - Postings already tracked as jobs are skipped (this is what lets 'added' rows be purged safely).
     - Postings that disappear are marked 'closed', but only when the listing was complete (no page cap hit).
     """
@@ -763,6 +793,7 @@ def record_poll(c: psycopg.Connection, board: dict, listed: list[ListedPosting])
     complete = getattr(listed, "complete", True)
     first = board["last_success_at"] is None  # not last_polled_at: a failed first attempt must not end the baseline
     baseline = first and not board["title_include"]
+    max_age = board_options.max_age_days()
     new: list[dict] = []
     seen_ids = [p.ats_posting_id for p in listed]
     with c.cursor() as cur:
@@ -777,7 +808,8 @@ def record_poll(c: psycopg.Connection, board: dict, listed: list[ListedPosting])
             cur.execute("SELECT 1 FROM jobs WHERE canonical_url = %s", (canon,))
             if cur.fetchone():
                 continue
-            ok = filters.passes(p.title, p.location, board["title_include"], board["title_exclude"], board["location_include"])
+            ok = (filters.passes(p.title, p.location, board["title_include"], board["title_exclude"], board["location_include"])
+                  and filters.is_recent(p.posted_at, max_age))
             state = "filtered" if not ok else ("baseline" if baseline else "new")
             cur.execute(
                 """INSERT INTO discovered_postings (board_id, ats_posting_id, url, canonical_url, title, location, posted_at, state)

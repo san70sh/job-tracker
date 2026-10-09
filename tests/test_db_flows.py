@@ -115,6 +115,32 @@ def test_filters_make_matching_postings_new_immediately_and_others_silent(c):
     assert [n["id"] for n in new] and states(c) == {"1": "new", "2": "filtered", "3": "filtered"}
 
 
+def test_postings_older_than_the_age_limit_are_not_announced(c):
+    from datetime import timedelta
+
+    from jobtracker import board_options
+
+    limit, today = board_options.max_age_days(), date.today()
+    b = board(c, title_include=["backend"])
+    dated = lambda i, days: lp(i).model_copy(update={"posted_at": None if days is None else today - timedelta(days=days)})
+    new = repo.record_poll(c, b, ListedBatch([dated(1, 0), dated(2, limit), dated(3, limit + 1), dated(4, None)]))
+    assert sorted(n["url"][-1] for n in new) == ["1", "2", "4"]             # the limit day itself counts; no date = kept
+    assert states(c) == {"1": "new", "2": "new", "3": "filtered", "4": "new"}
+
+
+def test_editing_filters_never_brings_back_a_posting_past_the_age_limit(c):
+    from datetime import timedelta
+
+    from jobtracker import board_options, boards
+
+    old = date.today() - timedelta(days=board_options.max_age_days() + 5)
+    bid, _ = _gh(c, "Acme", "acme", title_include=["backend"])
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1).model_copy(update={"posted_at": old})]))
+    assert states(c) == {"1": "filtered"}
+    boards.update(c, bid, {"title_include": ["backend", "engineer"]})      # still stale: stays out of the Inbox
+    assert states(c) == {"1": "filtered"}
+
+
 def test_closing_only_from_a_complete_listing(c):
     b = board(c)
     repo.record_poll(c, b, ListedBatch([lp(1), lp(2)]))
@@ -181,6 +207,40 @@ def test_needs_review_clears_when_required_fields_are_filled(c):
     assert repo.get_job(c, jid)["needs_review"] is True  # requirements still empty
     repo.update_job(c, jid, requirements="• Java")
     assert repo.get_job(c, jid)["needs_review"] is False
+
+
+def test_a_flagged_job_names_the_fields_to_check_and_each_clears_when_you_settle_it(c):
+    jid = make_job(c, status="Applied")
+    with c.cursor() as cur:
+        cur.execute("UPDATE jobs SET needs_review = true, requirements = NULL WHERE id = %s", (jid,))
+        cur.execute("""INSERT INTO field_provenance (job_id, field, method, confidence) VALUES (%s,'key_responsibilities','rules',0.55)
+                       ON CONFLICT (job_id, field) DO UPDATE SET method='rules', confidence=0.55""", (jid,))
+    c.commit()
+    review = {r["field"]: r for r in repo.get_job(c, jid)["review"]}
+    assert {f: r["reason"] for f, r in review.items()} == {"key_responsibilities": "not_sure", "requirements": "not_found"}
+    assert (review["key_responsibilities"]["method"], review["key_responsibilities"]["confidence"]) == ("rules", 0.55)
+    repo.update_job(c, jid, notes="an unrelated edit")  # does not settle either field
+    assert repo.get_job(c, jid)["needs_review"] is True
+    repo.update_job(c, jid, requirements="• Java")      # one settled: the other is still listed
+    job = repo.get_job(c, jid)
+    assert job["needs_review"] is True and [r["field"] for r in job["review"]] == ["key_responsibilities"]
+    repo.update_job(c, jid, key_responsibilities="• Build services")
+    job = repo.get_job(c, jid)
+    assert job["needs_review"] is False and job["review"] == []
+
+
+def test_marking_a_job_reviewed_is_not_undone_by_a_later_edit(c):
+    jid = make_job(c, status="Applied")
+    with c.cursor() as cur:
+        cur.execute("UPDATE jobs SET needs_review = true WHERE id = %s", (jid,))
+        cur.execute("""INSERT INTO field_provenance (job_id, field, method, confidence) VALUES (%s,'requirements','rules',0.5)
+                       ON CONFLICT (job_id, field) DO UPDATE SET method='rules', confidence=0.5""", (jid,))
+    c.commit()
+    assert [r["field"] for r in repo.get_job(c, jid)["review"]] == ["requirements"]
+    repo.mark_reviewed(c, jid)                         # "it is fine as it is"
+    repo.update_job(c, jid, notes="later note")
+    job = repo.get_job(c, jid)
+    assert job["needs_review"] is False and job["review"] == []
 
 
 # ───────────────────────────── notion outbox ─────────────────────────────
