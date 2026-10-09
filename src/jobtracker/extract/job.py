@@ -12,6 +12,7 @@ from .facts import (
     format_experience,
     level_display,
     normalize_level,
+    Experience,
     parse_experience,
 )
 from .salary import Benchmark, SalaryResult, resolve_salary
@@ -103,7 +104,7 @@ def extract(posting: Posting, vocab: Vocab | None = None) -> ExtractedJob:
     ex.set("requirements", format_requirements(required, nice), "rules", 0.85 if required else 0.4)
 
     # experience: look in requirements first, then everywhere
-    exp = parse_experience("\n".join(required)) or parse_experience(full_text)
+    exp = find_experience(required, full_text)
     if exp:
         ex.set("experience_required", exp.text, "rules", 0.8)
         ex.set("experience_min_years", exp.min_years, "rules", 0.8)
@@ -113,6 +114,18 @@ def extract(posting: Posting, vocab: Vocab | None = None) -> ExtractedJob:
     ex.technologies = tag_technologies(sections, vocab)
     ex.pay = posting.pay
     return ex
+
+
+def find_experience(requirements: list[str], full_text: str) -> Experience | None:
+    """The years a posting asks for: its requirements first, then anywhere in the text (a labelled line such as
+    "Experience: 3-5 years" is found either way)."""
+    return parse_experience("\n".join(requirements)) or parse_experience(full_text)
+
+
+def experience_of(posting: Posting) -> Experience | None:
+    """Only the experience of a fetched posting, without running the other extractors."""
+    text = blocks_to_text(html_to_blocks(posting.description_html)) if posting.description_html else ""
+    return find_experience(_join(build_sections(posting), ("requirements",)), text)
 
 
 def apply_salary(

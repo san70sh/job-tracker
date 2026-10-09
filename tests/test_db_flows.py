@@ -779,6 +779,102 @@ def test_editing_filters_moves_waiting_postings_in_and_out_of_the_inbox(c):
     assert states(c)["3"] == "seen"                                        # back in the Inbox, quietly
 
 
+def _exp(i, lo=None, hi=None, state=None, title="Backend Engineer"):
+    from jobtracker.models import ListedPosting
+
+    return ListedPosting(ats_posting_id=str(i), url=f"https://boards.greenhouse.io/acme/jobs/{i}", title=title, location="Bengaluru",
+                         experience_min=lo, experience_max=hi, experience_state=state)
+
+
+def test_postings_outside_the_experience_range_are_filtered_and_the_years_are_kept(c):
+    bid, _ = _gh(c, experience_min=3, experience_max=6)
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1), lp(2)]))                                # the first check only records what is open
+    assert states(c) == {"1": "baseline", "2": "baseline"}
+    new = repo.record_poll(c, _row(c, bid), ListedBatch([lp(1), lp(2), _exp(3, 4, 5, "read"), _exp(4, 8, None, "read"),
+                                                         _exp(5, state="unstated"), _exp(6, state="deferred")]))
+    assert sorted(n["url"][-1] for n in new) == ["3", "5"]                                        # 4 asks for "8+", 6 is not read yet
+    assert states(c) == {"1": "baseline", "2": "baseline", "3": "new", "4": "filtered", "5": "new"}  # 6 is not stored at all
+    with c.cursor() as cur:
+        cur.execute("SELECT ats_posting_id, experience_min, experience_max FROM discovered_postings WHERE ats_posting_id IN ('3','4','5') ORDER BY 1")
+        assert [(r["ats_posting_id"], r["experience_min"], r["experience_max"]) for r in cur.fetchall()] == [
+            ("3", 4, 5), ("4", 8, None), ("5", None, None)]
+    again = repo.record_poll(c, _row(c, bid), ListedBatch([lp(1), lp(2), _exp(3), _exp(4), _exp(5), _exp(6, 5, None, "read")]))  # the deferred one is judged now
+    assert [n["url"][-1] for n in again] == ["6"] and states(c)["6"] == "new"
+    assert repo.known_posting_ids(c, bid) == {"1", "2", "3", "4", "5", "6"}
+
+
+def test_a_check_reads_experience_only_after_the_silent_first_check(pasted, monkeypatch):
+    import asyncio
+    from datetime import date
+
+    from jobtracker import watcher
+    from jobtracker.adapters import registry
+    from jobtracker.adapters.greenhouse import Greenhouse
+    from jobtracker.models import Posting
+
+    opened = []
+
+    class Reads(Greenhouse):
+        async def fetch(self, target, f):
+            opened.append(target.posting_id)
+            years = {"3": "4 years", "4": "12 years"}.get(target.posting_id, "no years here")
+            return Posting(ats="greenhouse", url=target.url, title="x",
+                           description_html=f"<h3>Requirements</h3><ul><li>{years} of experience in backend development</li></ul>")
+
+    real = registry.adapters()
+    monkeypatch.setattr(registry, "adapters", lambda: {**real, "greenhouse": Reads()})
+    bid, _ = _gh(pasted, experience_min=3, experience_max=6)
+    today = date.today()
+    batches = iter([[1, 2], [1, 2, 3, 4, 5]])
+
+    async def listing(row, f):
+        return ListedBatch([ListedPosting(ats_posting_id=str(i), url=f"https://boards.greenhouse.io/acme/jobs/{i}", title="Engineer",
+                                          location="Pune", posted_at=today) for i in next(batches)]), row
+
+    monkeypatch.setattr(watcher, "fetch_listing", listing)
+    asyncio.run(watcher.poll_board(_row(pasted, bid), object()))
+    assert opened == [] and states(pasted) == {"1": "baseline", "2": "baseline"}                 # the first check judges nothing, so opens nothing
+    new = asyncio.run(watcher.poll_board(_row(pasted, bid), object()))
+    assert sorted(opened) == ["3", "4", "5"]                                                       # the stored postings 1 and 2 are not opened again
+    assert sorted(n["url"][-1] for n in new) == ["3", "5"] and states(pasted)["4"] == "filtered"  # 4 asks for 12 years, 5 states none
+
+
+def test_a_posting_still_to_be_read_is_not_closed_by_missing_from_storage(c):
+    bid, _ = _gh(c, experience_min=3)
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1)]))
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1), _exp(2, state="deferred")]))           # listed and open, just not judged yet
+    assert states(c) == {"1": "baseline"}
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1)]))                                       # now it really left the board
+    assert states(c) == {"1": "baseline"}
+
+
+def test_changing_the_experience_range_moves_waiting_postings_in_and_out_of_the_inbox(c):
+    from jobtracker import boards
+
+    bid, _ = _gh(c, experience_min=3, experience_max=6)
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1)]))
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1), _exp(3, 4, 5, "read"), _exp(4, 8, None, "read"), _exp(5, state="unstated")]))
+    assert states(c) == {"1": "baseline", "3": "new", "4": "filtered", "5": "new"}
+    assert boards.update(c, bid, {"experience_min": 8, "experience_max": None}) == ["experience_min", "experience_max"]
+    assert states(c) == {"1": "baseline", "3": "filtered", "4": "seen", "5": "new"}              # 4 returns quietly; 5 stated nothing, so it stays
+    boards.update(c, bid, {"experience_min": None})                                              # no range at all: everything that is pending is back
+    assert states(c)["3"] == "seen" and states(c)["4"] == "seen"
+
+
+def test_the_experience_range_is_validated_as_a_whole(c):
+    from jobtracker import boards
+
+    bid, _ = _gh(c, experience_min=3, experience_max=6)
+    with pytest.raises(ValueError, match="cannot be above"):
+        boards.update(c, bid, {"experience_min": 7})          # the maximum already saved is 6
+    with pytest.raises(ValueError, match="between 0 and"):
+        boards.update(c, bid, {"experience_max": 99})
+    with pytest.raises(ValueError, match="between 0 and"):
+        boards.update(c, bid, {"experience_min": -1})
+    assert boards.update(c, bid, {"experience_max": None}) == ["experience_max"]                  # an end can be cleared on its own
+    assert (_row(c, bid)["experience_min"], _row(c, bid)["experience_max"]) == (3, None)
+
+
 def test_board_edits_are_validated(c):
     from jobtracker import boards
 
@@ -859,6 +955,45 @@ def test_meta_serves_what_the_pages_would_otherwise_hardcode(api):
     assert {s["slug"] for s in m["statuses"]} >= {"oa-assessment", "recruiter-screen"}          # derived from the name, one function
     assert m["default_poll_minutes"] == 180 and 180 in {i["minutes"] for i in m["poll_intervals"]}
     assert m["stale_after_hours"] and m["ats_colours"]["workday"]
+
+
+def test_a_board_with_an_experience_range_through_the_api_and_its_preview(api, monkeypatch):
+    from jobtracker import watcher
+    from jobtracker.adapters import registry
+    from jobtracker.models import Posting
+
+    r = api.post("/api/boards", json={"url": "https://boards.greenhouse.io/acme", "experience_min": 3, "experience_max": 6})
+    assert r.status_code == 200
+    row = next(b for b in api.get("/api/boards").json() if b["id"] == r.json()["id"])
+    assert (row["experience_min"], row["experience_max"]) == (3, 6)
+    assert api.post("/api/boards", json={"url": "https://boards.greenhouse.io/other", "experience_min": 9, "experience_max": 2}).status_code == 422
+
+    pages = {"1": "<h3>Requirements</h3><ul><li>4 years of experience</li></ul>", "2": "<h3>Requirements</h3><ul><li>10+ years of experience</li></ul>",
+             "3": "<p>Great team</p>"}
+
+    from jobtracker.adapters.greenhouse import Greenhouse
+
+    class Fake(Greenhouse):  # recognises addresses like the real one; only opening a posting is faked
+        async def fetch(self, target, f):
+            return Posting(ats="greenhouse", url=target.url, title="x", description_html=pages[target.posting_id])
+
+    async def fake_listing(row, f):
+        from datetime import date
+
+        return ListedBatch([ListedPosting(ats_posting_id=i, url=f"https://x/{i}", title="Engineer", posted_at=date.today()) for i in pages]), row
+
+    monkeypatch.setattr(watcher, "fetch_listing", fake_listing)
+    real = registry.adapters()
+    monkeypatch.setattr(registry, "adapters", lambda: {**real, "greenhouse": Fake()})  # only Greenhouse is faked: addresses still need the rest
+    pv = api.post("/api/boards/preview", json={"url": "https://boards.greenhouse.io/acme", "experience_min": 3, "experience_max": 6}).json()
+    assert pv["matched"] == 3 and pv["recent"] == 2                                                # the "10+" posting is out; "not stated" stays
+    assert pv["experience"] == {"read": 3, "not_stated": 1, "outside": 1, "not_read": 0}
+    plain = api.post("/api/boards/preview", json={"url": "https://boards.greenhouse.io/acme"}).json()
+    assert plain["experience"] is None and plain["recent"] == 3                                    # no range: no posting is opened
+
+    bid = r.json()["id"]
+    assert api.patch(f"/api/boards/{bid}", json={"experience_min": None, "experience_max": None}).json()["changed"] == ["experience_min", "experience_max"]
+    assert api.patch(f"/api/boards/{bid}", json={"experience_min": 9, "experience_max": 2}).status_code == 422
 
 
 def test_a_board_can_be_added_edited_previewed_and_checked(api, monkeypatch):

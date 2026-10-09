@@ -23,7 +23,7 @@ function row(d) {
   const late = d.age_days > LATE;
   const age = d.age_days === 0 ? "today" : `${d.age_days}d waiting`;
   return `<div class="card row" id="d-${d.id}"><span class="dot" data-c="${d.state === "new" ? "blue" : "gray"}" title="${esc(d.state)}"></span><div class="grow"><a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.title)}</a>
-    <div class="muted">${esc(d.company)} · ${esc(d.location || "location n/a")}${d.posted_at ? " · posted " + d.posted_at : ""}
+    <div class="muted">${esc(d.company)} · ${esc(d.location || "location n/a")}${d.posted_at ? " · posted " + d.posted_at : ""}${d.experience_min != null ? " · asks " + yearsText(d.experience_min, d.experience_max) : ""}
       · <span class="age ${late ? "late" : ""}">${age}</span> <span class="pill" data-c="${d.state === "new" ? "blue" : "gray"}">${esc(d.state)}</span></div></div>
     <button onclick="add('${d.id}', this)">Add to tracker</button>
     <button class="ghost" onclick="notInterested('${d.id}')">Not interested</button></div>`;

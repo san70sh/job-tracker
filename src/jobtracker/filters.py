@@ -53,6 +53,23 @@ def any_match(text: str | None, terms: Iterable[str], location: bool = False) ->
     return any(compile_term(t, location).search(text or "") for t in terms)
 
 
+def board_keeps(board, p, max_age_days: int) -> bool:
+    """What a board's filters can judge from the listing alone: title words, place and age (not the years of experience)."""
+    return (passes(p.title, p.location, board["title_include"], board["title_exclude"], board["location_include"])
+            and is_recent(p.posted_at, max_age_days))
+
+
+def experience_fits(found_min: float | None, found_max: float | None, want_min: float | None, want_max: float | None) -> bool:
+    """Does what a posting asks for overlap the years you want? A posting says [min, max] ("5+" has no max); you give
+    either end or both. 3-6 wanted: "2-4" fits, "5+" fits, "8-12" and "0-2" do not. A posting that states nothing
+    fits: it cannot be shown not to."""
+    if found_min is None:
+        return True
+    if want_max is not None and found_min > want_max:
+        return False
+    return want_min is None or found_max is None or found_max >= want_min
+
+
 def is_recent(posted_at: date | None, max_age_days: int, today: date | None = None) -> bool:
     """Posted within the last `max_age_days` days. A posting with no date is kept: it cannot be shown to be old."""
     return posted_at is None or posted_at >= (today or date.today()) - timedelta(days=max_age_days)

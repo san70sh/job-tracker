@@ -422,6 +422,8 @@ class NewBoard(BaseModel):
     title_include: list[str] = []
     title_exclude: list[str] = []
     location_include: list[str] = []
+    experience_min: int | None = None  # years wanted, either end optional
+    experience_max: int | None = None
     poll_interval_minutes: int | None = None
 
 
@@ -430,6 +432,8 @@ class BoardPatch(BaseModel):
     title_include: list[str] | None = None
     title_exclude: list[str] | None = None
     location_include: list[str] | None = None
+    experience_min: int | None = None  # sent as null to clear it
+    experience_max: int | None = None
     poll_interval_minutes: int | None = None
     enabled: bool | None = None
 
@@ -440,9 +444,12 @@ class BoardPreview(BaseModel):
     title_include: list[str] = []
     title_exclude: list[str] = []
     location_include: list[str] = []
+    experience_min: int | None = None
+    experience_max: int | None = None
 
 
-BOARD_FIELDS = ("id", "ats", "board_url", "title_include", "title_exclude", "location_include", "poll_interval_minutes", "enabled",
+BOARD_FIELDS = ("id", "ats", "board_url", "title_include", "title_exclude", "location_include", "experience_min", "experience_max",
+                "poll_interval_minutes", "enabled",
                 "last_polled_at", "last_success_at", "last_error", "last_listed", "last_new", "new_count", "company_jobs", "company")
 
 
@@ -490,13 +497,14 @@ async def add_board(body: NewBoard):
     adapter, board = found.adapter, found.board
     try:
         include, exclude, places = (boards.clean_terms(t) for t in (body.title_include, body.title_exclude, body.location_include))
+        years = boards.clean_range(body.experience_min, body.experience_max)
     except ValueError as e:
         raise HTTPException(422, str(e))
     company = (body.company or "").strip() or board.company or (board.slug or "").replace("-", " ").title()
     try:
         bid, created = await asyncio.to_thread(lambda: _with(
             repo.add_board, company, board, body.url.strip(), title_include=include, title_exclude=exclude,
-            location_include=places, interval_minutes=body.poll_interval_minutes))
+            location_include=places, interval_minutes=body.poll_interval_minutes, experience_min=years[0], experience_max=years[1]))
     except psycopg.errors.InvalidTextRepresentation:  # the database predates this job system: it needs its migration
         raise HTTPException(503, f"The database does not know {adapter.ats} yet. Run scripts/db.ps1 apply, then try again.")
     return {"id": bid, "company": company, "ats": adapter.ats, "created": created,
@@ -527,6 +535,7 @@ async def preview_board(body: BoardPreview):
     """What these filters would keep on the board right now. Nothing is saved."""
     try:
         filters_in = {k: boards.clean_terms(getattr(body, k)) for k in boards.FILTER_FIELDS}
+        filters_in.update(zip(boards.EXPERIENCE_FIELDS, boards.clean_range(body.experience_min, body.experience_max)))
     except ValueError as e:
         raise HTTPException(422, str(e))
     if body.board_id is not None:

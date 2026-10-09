@@ -157,6 +157,9 @@ const metaReady = fetch("/api/meta").then(r => r.json()).then(m => (META = m));
 const stSlug = name => (META.statuses.find(s => s.name === name) || META.inbox).slug;
 const colOf = j => (j.stage === "Applied" && j.status) ? j.status : META.inbox.name;  // the pipeline column a job sits in
 const statusLabel = name => name === META.inbox.name ? META.inbox.label : name;
+// years as people say them: "3-6 yrs", "5+ yrs", "up to 4 yrs" (a missing minimum means no lower limit)
+const yearsText = (lo, hi) => lo != null && hi != null ? (+lo === +hi ? `${+lo} yrs` : `${+lo}\u2013${+hi} yrs`)
+  : lo != null ? `${+lo}+ yrs` : hi != null ? `up to ${+hi} yrs` : "";
 const statusPill = name => `<span class="pill" data-st="${stSlug(name)}">${esc(statusLabel(name))}</span>`;
 const modePill = m => m ? `<span class="pill" data-st="mode-${esc(String(m).toLowerCase())}">${esc(m)}</span>` : "";
 async function api(path, opts={}) {
