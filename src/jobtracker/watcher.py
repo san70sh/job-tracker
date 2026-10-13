@@ -54,7 +54,7 @@ async def poll_due(f: Fetcher | None = None, force: bool = False) -> int:
     own = f is None
     f = f or Fetcher()
     try:
-        rows = await asyncio.to_thread(_record, repo.list_boards, not force)
+        rows = await asyncio.to_thread(lambda: _record(repo.list_boards, not force, None, True))  # "check all" skips paused boards too
         n = 0
         for row in rows:
             n += len(await poll_board(row, f))

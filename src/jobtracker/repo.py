@@ -691,10 +691,14 @@ def default_poll_minutes(c: psycopg.Connection) -> int:
         return int(cur.fetchone()["column_default"])
 
 
-def list_boards(c: psycopg.Connection, only_due: bool = False, board_id: int | None = None) -> list[dict]:
+def list_boards(c: psycopg.Connection, only_due: bool = False, board_id: int | None = None, active_only: bool = False) -> list[dict]:
+    """Watched boards. `active_only` leaves out paused ones (every bulk check asks for it: pausing means no automatic
+    pulls at all); `only_due` is the scheduled check, which also waits for each board's interval."""
     where = []
+    if active_only or only_due:
+        where.append("b.enabled")
     if only_due:  # last_polled_at is the last attempt, so a failing board waits its interval like any other
-        where.append("b.enabled AND (b.last_polled_at IS NULL OR b.last_polled_at < now() - make_interval(mins => b.poll_interval_minutes))")
+        where.append("(b.last_polled_at IS NULL OR b.last_polled_at < now() - make_interval(mins => b.poll_interval_minutes))")
     if board_id is not None:
         where.append("b.id = %(id)s")
     with c.cursor() as cur:

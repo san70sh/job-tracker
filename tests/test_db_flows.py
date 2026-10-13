@@ -779,6 +779,53 @@ def test_editing_filters_moves_waiting_postings_in_and_out_of_the_inbox(c):
     assert states(c)["3"] == "seen"                                        # back in the Inbox, quietly
 
 
+def test_a_paused_board_is_left_out_of_every_bulk_check(pasted, monkeypatch):
+    import asyncio
+
+    from jobtracker import boards, watcher
+
+    c = pasted
+    live, _ = _gh(c, "Live", "live")
+    paused, _ = _gh(c, "Paused", "paused")
+    boards.update(c, paused, {"enabled": False})
+    assert {b["id"] for b in repo.list_boards(c)} == {live, paused}                   # the page lists both
+    assert [b["id"] for b in repo.list_boards(c, active_only=True)] == [live]
+    checked = []
+
+    async def fake_poll_board(row, f):
+        checked.append(row["id"])
+        return []
+
+    monkeypatch.setattr(watcher, "poll_board", fake_poll_board)
+    asyncio.run(watcher.poll_due(f=object(), force=True))   # "check all now" ignores the interval, not the pause
+    assert checked == [live]
+    checked.clear()
+    boards.update(c, paused, {"enabled": True})              # resumed: part of the next bulk check again
+    asyncio.run(watcher.poll_due(f=object(), force=True))
+    assert sorted(checked) == sorted([live, paused])
+
+
+def test_pausing_through_the_api_and_checking_one_paused_board_by_hand(pasted, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from jobtracker import watcher
+    from jobtracker.web import app as webapp
+
+    api = TestClient(webapp.app)
+    bid, _ = _gh(pasted, "Solo", "solo")
+    assert api.patch(f"/api/boards/{bid}", json={"enabled": False}).json()["changed"] == ["enabled"]
+    assert next(b for b in api.get("/api/boards").json() if b["id"] == bid)["enabled"] is False
+    seen = []
+
+    async def fake_poll_board(row, f):
+        seen.append(row["id"])
+        return []
+
+    monkeypatch.setattr(watcher, "poll_board", fake_poll_board)
+    assert api.post(f"/api/boards/{bid}/poll").json() == {"new": 0} and seen == [bid]  # asking for this one board is explicit
+    assert api.patch(f"/api/boards/{bid}", json={"enabled": True}).json()["changed"] == ["enabled"]
+
+
 def test_board_edits_are_validated(c):
     from jobtracker import boards
 
