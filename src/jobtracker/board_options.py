@@ -28,6 +28,11 @@ def country_names() -> dict[str, str]:
     return load()["country_names"]
 
 
+def experience_checks_per_poll() -> int:
+    """Reading a posting's experience means opening it (one request, spaced per host): a check reads at most this many."""
+    return load()["experience_checks_per_poll"]
+
+
 def max_age_days() -> int:
     """How old a posting may be and still be announced."""
     return load()["max_age_days"]

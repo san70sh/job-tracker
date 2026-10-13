@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from urllib.parse import parse_qs, urlsplit
 
-from ..http import Fetcher
+from ..http import FetchError, Fetcher, PostingGone
 from ..models import BoardRef, ListedPosting, Posting
 
 
@@ -16,6 +16,10 @@ class Unsupported(Exception):
 
 class NeedsFallback(Exception):
     """The structured source could not be used; the caller should degrade to the generic parser."""
+
+
+# What reading one posting can fail with when the posting or its system is the problem (not a bug here)
+READ_ERRORS = (FetchError, PostingGone, NeedsFallback, Unsupported, KeyError, ValueError, TypeError)
 
 
 @dataclass

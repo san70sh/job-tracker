@@ -14,7 +14,7 @@ from . import board_options, filters
 from .extract.job import review_reasons
 from .extract.salary import Benchmark, SalaryResult
 from .extract.vocab import load_vocab
-from .models import IDENTITY_KEYS, BoardRef, ExtractedJob, ListedPosting
+from .models import EXP_DEFERRED, IDENTITY_KEYS, BoardRef, ExtractedJob, ListedPosting
 from .urls import normalize_company
 
 STATUSES = ["Applied", "OA / Assessment", "Recruiter Screen", "Interviewing", "Offer", "Rejected", "Withdrawn", "Ghosted"]
@@ -646,7 +646,7 @@ def save_portal_host(c: psycopg.Connection, host: str, entry: dict, evidence: st
 
 
 # ───────────────────────────── watched boards + discovery ─────────────────────────────
-BOARD_EDITABLE = ("title_include", "title_exclude", "location_include", "poll_interval_minutes", "enabled")
+BOARD_EDITABLE = ("title_include", "title_exclude", "location_include", "experience_min", "experience_max", "poll_interval_minutes", "enabled")
 COMPANY_TABLES = ("jobs", "watched_boards", "salary_benchmarks")  # tables whose company_id points at companies
 
 
@@ -665,7 +665,8 @@ def find_board(c: psycopg.Connection, board: BoardRef) -> dict | None:
 
 def add_board(c: psycopg.Connection, company: str, board: BoardRef, board_url: str, *, title_include: list[str] | None = None,
               title_exclude: list[str] | None = None, location_include: list[str] | None = None,
-              interval_minutes: int | None = None) -> tuple[int, bool]:
+              interval_minutes: int | None = None, experience_min: int | None = None,
+              experience_max: int | None = None) -> tuple[int, bool]:
     """Returns (board id, created). A board that is already watched is returned untouched, never overwritten."""
     if existing := find_board(c, board):
         return existing["id"], False
@@ -673,6 +674,7 @@ def add_board(c: psycopg.Connection, company: str, board: BoardRef, board_url: s
         "company_id": upsert_company(c, company, board.ats, board.slug, board.config), "ats": board.ats, "board_url": board_url,
         "slug": board.slug, "config": Jsonb(board.config), "title_include": title_include or [],
         "title_exclude": title_exclude or [], "location_include": location_include or []}
+    values.update({k: v for k, v in (("experience_min", experience_min), ("experience_max", experience_max)) if v is not None})
     if interval_minutes is not None:  # otherwise the column's own default applies: it is the only place that number lives
         values["poll_interval_minutes"] = interval_minutes
     marks = ", ".join("%s::ats_type" if k == "ats" else "%s" for k in values)
@@ -759,12 +761,14 @@ def refilter_pending(c: psycopg.Connection, board_id: int) -> dict[str, int]:
     never hidden for age (they may simply have waited), and silent baseline rows are left alone."""
     moved = {"hidden": 0, "restored": 0}
     with c.cursor() as cur:
-        cur.execute("SELECT title_include, title_exclude, location_include FROM watched_boards WHERE id = %s", (board_id,))
+        cur.execute("SELECT title_include, title_exclude, location_include, experience_min, experience_max FROM watched_boards WHERE id = %s", (board_id,))
         f = cur.fetchone()
-        cur.execute("SELECT id, title, location, posted_at, state FROM discovered_postings WHERE board_id = %s AND state IN ('new', 'seen', 'filtered')", (board_id,))
+        cur.execute("SELECT id, title, location, posted_at, state, experience_min, experience_max FROM discovered_postings "
+                    "WHERE board_id = %s AND state IN ('new', 'seen', 'filtered')", (board_id,))
         max_age = board_options.max_age_days()
         for r in cur.fetchall():
-            ok = filters.passes(r["title"], r["location"], f["title_include"], f["title_exclude"], f["location_include"])
+            ok = (filters.passes(r["title"], r["location"], f["title_include"], f["title_exclude"], f["location_include"])
+                  and filters.experience_fits(r["experience_min"], r["experience_max"], f["experience_min"], f["experience_max"]))
             if ok and r["state"] == "filtered" and filters.is_recent(r["posted_at"], max_age):
                 cur.execute("UPDATE discovered_postings SET state = 'seen' WHERE id = %s", (r["id"],))
                 moved["restored"] += 1
@@ -782,21 +786,33 @@ def applied_jobs(c: psycopg.Connection) -> list[dict]:
         return cur.fetchall()
 
 
+def is_baseline(board: dict) -> bool:
+    """The first good check of a board without a title filter only records what is open (silently)."""
+    return board["last_success_at"] is None and not board["title_include"]  # not last_polled_at: a failed first attempt must not end it
+
+
+def known_posting_ids(c: psycopg.Connection, board_id: int) -> set[str]:
+    with c.cursor() as cur:
+        cur.execute("SELECT ats_posting_id FROM discovered_postings WHERE board_id = %s", (board_id,))
+        return {r["ats_posting_id"] for r in cur.fetchall()}
+
+
 def record_poll(c: psycopg.Connection, board: dict, listed: list[ListedPosting]) -> list[dict]:
     """Store a poll result. Returns the postings that are new (state 'new').
 
     - First good check of an unfiltered board: everything already open is 'baseline' (silent), so a 400-job board
       does not flood the popup. With a title filter, matching postings are 'new' straight away.
-    - Postings failing the board's filters, or posted longer ago than the age limit, are stored as 'filtered' (silent)
-      so they are not re-evaluated.
+    - Postings failing the board's filters, posted longer ago than the age limit, or stating years of experience outside
+      the board's range, are stored as 'filtered' (silent) so they are not re-evaluated.
+    - A posting whose experience is still to be read (EXP_DEFERRED, see experience.py) is not stored yet: a later check
+      judges it, and it still counts as open so nothing else is closed because of it.
     - Postings already tracked as jobs are skipped (this is what lets 'added' rows be purged safely).
     - Postings that disappear are marked 'closed', but only when the listing was complete (no page cap hit).
     """
     from .urls import canonicalize
 
     complete = getattr(listed, "complete", True)
-    first = board["last_success_at"] is None  # not last_polled_at: a failed first attempt must not end the baseline
-    baseline = first and not board["title_include"]
+    baseline = is_baseline(board)
     max_age = board_options.max_age_days()
     new: list[dict] = []
     seen_ids = [p.ats_posting_id for p in listed]
@@ -808,17 +824,20 @@ def record_poll(c: psycopg.Connection, board: dict, listed: list[ListedPosting])
                 cur.execute("UPDATE discovered_postings SET last_seen_at = now(), "
                             "state = CASE WHEN state = 'closed' THEN 'seen' ELSE state END WHERE id = %s", (existing["id"],))
                 continue
+            if p.experience_state == EXP_DEFERRED:
+                continue
             canon = canonicalize(p.url)
             cur.execute("SELECT 1 FROM jobs WHERE canonical_url = %s", (canon,))
             if cur.fetchone():
                 continue
-            ok = (filters.passes(p.title, p.location, board["title_include"], board["title_exclude"], board["location_include"])
-                  and filters.is_recent(p.posted_at, max_age))
+            ok = filters.board_keeps(board, p, max_age) and filters.experience_fits(
+                p.experience_min, p.experience_max, board.get("experience_min"), board.get("experience_max"))
             state = "filtered" if not ok else ("baseline" if baseline else "new")
             cur.execute(
-                """INSERT INTO discovered_postings (board_id, ats_posting_id, url, canonical_url, title, location, posted_at, state)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
-                (board["id"], p.ats_posting_id, p.url, canon, p.title, p.location, p.posted_at, state),
+                """INSERT INTO discovered_postings (board_id, ats_posting_id, url, canonical_url, title, location, posted_at, state,
+                                                       experience_min, experience_max)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+                (board["id"], p.ats_posting_id, p.url, canon, p.title, p.location, p.posted_at, state, p.experience_min, p.experience_max),
             )
             if state == "new":
                 new.append({"id": str(cur.fetchone()["id"]), "title": p.title, "location": p.location, "url": p.url,
@@ -848,6 +867,7 @@ def list_discovered(c: psycopg.Connection, states: tuple[str, ...] = PENDING_STA
     with c.cursor() as cur:
         cur.execute(
             """SELECT d.id, d.title, d.location, d.url, d.posted_at, d.first_seen_at, d.state, co.name AS company,
+                      d.experience_min, d.experience_max,
                       EXTRACT(day FROM now() - d.first_seen_at)::int AS age_days
                FROM discovered_postings d JOIN watched_boards b ON b.id = d.board_id JOIN companies co ON co.id = b.company_id
                WHERE d.state = ANY(%s) ORDER BY d.first_seen_at ASC, d.posted_at DESC NULLS LAST LIMIT %s""", (list(states), limit))
