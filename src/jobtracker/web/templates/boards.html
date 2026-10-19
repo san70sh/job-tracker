@@ -19,6 +19,7 @@
   .form-grid label, .jv-scroll .f label { display:block; font-size:12px; color:var(--muted); margin:8px 0 3px; }
   .pv { margin-top:10px; font-size:14px; } .pv ul { margin:4px 0 0 18px; padding:0; } .pv .muted { font-size:12px; }
   .paused { opacity:.6; }
+  .exp { display:flex; gap:8px; align-items:center; } .exp input { width:84px; } .exp span { color:var(--muted); font-size:13px; }
   @media (max-width:900px) { table.boards { table-layout:auto; } .c-filters { display:none; } }
 {% endblock %}
 {% block main %}
@@ -43,7 +44,7 @@
 // The three filter fields, defined once: the add form and the edit dialog both build them from this list.
 const FILTERS = [["title_include", "Title must match", "e.g. backend, senior"], ["title_exclude", "Title must not match", "e.g. intern"], ["location_include", "Location", "e.g. Pune, Chennai"]];
 // names shown for the fields an edit can change (the filter fields reuse their labels above)
-const FIELD_LABEL = {company: "company", poll_interval_minutes: "check interval", enabled: "active", ...Object.fromEntries(FILTERS.map(([k, l]) => [k, l.toLowerCase()]))};
+const FIELD_LABEL = {company: "company", poll_interval_minutes: "check interval", enabled: "active", experience_min: "experience", experience_max: "experience", ...Object.fromEntries(FILTERS.map(([k, l]) => [k, l.toLowerCase()]))};
 let SUG = {}, BOARDS = [];
 
 // ───────── small helpers ─────────
@@ -71,15 +72,22 @@ function filterFields(host, values = {}) {
   host.innerHTML = FILTERS.map(([k, label]) => `<div class="f"><label>${label}</label><div data-chips="${k}"></div></div>`).join("");
   const chips = Object.fromEntries(FILTERS.map(([k, , hint]) => [k, Chips.mount(host.querySelector(`[data-chips=${k}]`),
     {value: values[k] || [], suggestions: SUG[k], placeholder: hint})]));
-  return {chips, read: () => Object.fromEntries(FILTERS.map(([k]) => [k, chips[k].get()]))};
+  host.insertAdjacentHTML("beforeend", `<div class="f"><label>Experience asked for (years)</label><div class="exp">
+    <input type="number" min="0" max="60" step="1" placeholder="from" data-years="experience_min" value="${values.experience_min ?? ""}">
+    <span>to</span><input type="number" min="0" max="60" step="1" placeholder="to" data-years="experience_max" value="${values.experience_max ?? ""}"></div>
+    <div class="muted" style="font-size:12px;margin-top:2px">Keeps postings whose stated years overlap this range; postings that state none are kept.</div></div>`);
+  const years = k => { const v = host.querySelector(`[data-years=${k}]`).value.trim(); return v === "" ? null : Number(v); };
+  return {chips, read: () => ({...Object.fromEntries(FILTERS.map(([k]) => [k, chips[k].get()])), experience_min: years("experience_min"), experience_max: years("experience_max")})};
 }
 
 async function showPreview(out, body) {
   out.innerHTML = '<span class="muted">Checking the board…</span>';
   try {
     const r = await api("/api/boards/preview", {method: "POST", body});
-    out.innerHTML = `<b>${r.recent}</b> of ${r.listed} open postings match and were posted in the last ${r.max_age_days} days${r.complete ? "" : " (the board is longer than one check reads)"}.
+    const y = r.experience;
+    out.innerHTML = `<b>${r.recent}</b> of ${r.listed} open postings match${y ? ", fit the experience range" : ""} and were posted in the last ${r.max_age_days} days${r.complete ? "" : " (the board is longer than one check reads)"}.
       <div class="muted">${r.matched} match the filters alone; postings with no posted date are always counted.</div>
+      ${y ? `<div class="muted">Experience ${esc(yearsText(body.experience_min, body.experience_max))}: opened ${y.read} posting${y.read === 1 ? "" : "s"}, ${y.outside} ask for years outside the range, ${y.not_stated} state none (kept)${y.not_read ? `, ${y.not_read} not opened yet (a check opens only so many at a time)` : ""}.</div>` : ""}
       ${r.narrowed_at_source ? '<div class="muted">Places are matched against the office list of the job system itself, so roles in several offices are included.</div>' : ""}
       ${r.sample.length ? `<ul>${r.sample.map(p => `<li>${esc(p.title)} <span class="muted">${esc(p.location || "")}</span></li>`).join("")}</ul>` : ""}`;
   } catch (e) { out.innerHTML = `<span class="status-err">${esc(e.message)}</span>`; }
@@ -89,7 +97,8 @@ async function showPreview(out, body) {
 function filterSummary(b) {
   const c = [...b.title_include.map(x => `<span title="Title must match ${esc(x)}">+ ${esc(x)}</span>`),
              ...b.title_exclude.map(x => `<span class="no" title="Title must not match ${esc(x)}">− ${esc(x)}</span>`),
-             ...b.location_include.map(x => `<span class="loc" title="Location ${esc(x)}">@ ${esc(x)}</span>`)];
+             ...b.location_include.map(x => `<span class="loc" title="Location ${esc(x)}">@ ${esc(x)}</span>`),
+             ...(b.experience_min != null || b.experience_max != null ? [`<span class="loc" title="Experience asked for">${esc(yearsText(b.experience_min, b.experience_max))}</span>`] : [])];
   return c.length ? `<div class="chips-row">${c.join("")}</div>` : '<span class="muted">none</span>';
 }
 function statusCell(b) {
@@ -167,7 +176,7 @@ function editBoard(id) {
     if (e.target.id !== "e-save") return;
     try {
       const r = await api(`/api/boards/${id}`, {method: "PATCH", body: read()});
-      toast(r.changed.length ? `Saved (${r.changed.map(k => FIELD_LABEL[k] || k).join(", ")})` : "Nothing changed");
+      toast(r.changed.length ? `Saved (${[...new Set(r.changed.map(k => FIELD_LABEL[k] || k))].join(", ")})` : "Nothing changed");  // min and max are one "experience"
       editor.close(true); window.reload();
     } catch (err) { toast(esc(err.message), "err"); }
   };
@@ -182,8 +191,8 @@ function setupAddForm() {
                        poll_interval_minutes: $("#b-every").value ? +$("#b-every").value : null});
   $("#b-preview").addEventListener("click", () => {
     if (!$("#b-url").value) return toast("Paste the board address first", "err");
-    const {url, title_include, title_exclude, location_include} = body();
-    showPreview($("#b-pv"), {url, title_include, title_exclude, location_include});
+    const {url, title_include, title_exclude, location_include, experience_min, experience_max} = body();
+    showPreview($("#b-pv"), {url, title_include, title_exclude, location_include, experience_min, experience_max});
   });
   $("#bf").addEventListener("submit", async e => {
     e.preventDefault();

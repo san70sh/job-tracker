@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from . import db, repo
+from . import db, experience, repo
 from .adapters import registry
 from .adapters.base import Unsupported
 from .events import bus
@@ -42,6 +42,12 @@ async def poll_board(row: dict, f: Fetcher) -> list[dict]:
             bus.publish("poll_error", board=row["company"], error=str(e))
         return []
 
+    if experience.wanted(effective) and not repo.is_baseline(effective):  # a silent first check judges nothing, so reads nothing
+        try:
+            known = await asyncio.to_thread(_record, repo.known_posting_ids, row["id"])
+            await experience.annotate(effective, listed, f, known)
+        except Exception:  # noqa: BLE001 - the years are an extra check: never let it cost the whole poll (postings stay unjudged by years)
+            log.exception("board %s (%s): reading experience failed", row["id"], row["company"])
     new = await asyncio.to_thread(_record, repo.record_poll, effective, listed)
     log.info("polled %s: %d listed, %d new", row["company"], len(listed), len(new))
     if new:

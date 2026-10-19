@@ -59,6 +59,10 @@ class ListedBatch(list):
         self.complete = complete
 
 
+# What reading a posting for its experience came to (ListedPosting.experience_state)
+EXP_READ, EXP_UNSTATED, EXP_DEFERRED = "read", "unstated", "deferred"
+
+
 class ListedPosting(BaseModel):
     """A posting seen on a board listing (no full description required)."""
 
@@ -68,6 +72,10 @@ class ListedPosting(BaseModel):
     location: str | None = None
     posted_at: date | None = None
     department: str | None = None
+    # filled in by experience.annotate for a board with an experience range: the years the posting asks for
+    experience_min: float | None = None
+    experience_max: float | None = None  # None with a min = "N+ years"
+    experience_state: str | None = None  # None: not looked at
 
 
 # config keys that tell two boards of one system apart (a Workday tenant has several sites, an Avature host several portals)
