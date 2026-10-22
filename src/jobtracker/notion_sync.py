@@ -191,10 +191,12 @@ def process_outbox(limit: int = 50) -> dict:
     if not configured():
         return {"skipped": "notion not configured"}
     client, ds = _client()
-    with db.conn() as c:
-        rows = repo.due_outbox(c, limit)
     done = failed = 0
-    for r in rows:
+    for _ in range(limit):  # one row at a time: a row is marked 'sending' only while it is really being sent
+        with db.conn() as c:
+            r = repo.claim_outbox(c)
+        if r is None:
+            break
         try:
             if r["op"] == "upsert":
                 push_job(str(r["job_id"]), client, ds)

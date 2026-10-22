@@ -182,7 +182,8 @@ sequenceDiagram
   U->>API: edit a job / change status / delete
   API->>DB: write the change + one pending outbox row (same transaction)
   Note over DB: repeated edits coalesce into one pending push
-  W->>DB: due rows
+  W->>DB: take the next due row, marked sending (SKIP LOCKED)
+  Note over DB: an edit during the push queues a new pending row
   W->>N: create or update page (2.5 req/s, 429 Retry-After honoured)
   alt success
     W->>DB: mark done, store content hash + page id
