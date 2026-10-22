@@ -348,6 +348,75 @@ def test_outbox_retries_a_429_and_archives_deleted_jobs(c, notion):
     assert notion.trashed and notion.trashed[0]["page_id"] == "page-new"
 
 
+@contextmanager
+def another_connection():
+    """A second session on the test database: what a request running alongside the outbox worker uses."""
+    other = psycopg.connect(_conninfo(TEST_DB), row_factory=dict_row)
+    try:
+        yield other
+    finally:
+        other.close()
+
+
+def test_an_edit_made_while_its_push_is_in_flight_is_pushed_afterwards(c, notion):
+    """The push reads the job, then you edit it before Notion answers. The edit must not fold into the row the worker
+    is about to mark done: it has to queue a push of its own, and that push must carry the edit."""
+    jid = make_job(c, page_id=None)
+    repo.enqueue_notion(c, jid)
+    create = notion.pages.create
+
+    def create_while_you_edit(**kw):
+        with another_connection() as other:
+            repo.update_job(other, jid, notes="edited during the push")
+        return create(**kw)
+
+    notion.pages.create = create_while_you_edit
+    assert notion_sync.process_outbox(limit=1) == {"delivered": 1, "failed": 0}
+    assert [(r["op"], r["status"]) for r in outbox(c)] == [("upsert", "done"), ("upsert", "pending")]
+    notion_sync.process_outbox()
+    assert notion.updated[-1]["properties"]["Notes"]["rich_text"][0]["text"]["content"] == "edited during the push"
+
+
+def test_a_row_being_sent_is_not_taken_by_a_second_run(c):
+    jid = make_job(c)
+    repo.enqueue_notion(c, jid)
+    first = repo.claim_outbox(c)
+    with another_connection() as other:
+        assert repo.claim_outbox(other) is None  # the scheduled run and a "Push to Notion" click never take the same row
+    assert first["job_id"] is not None and outbox(c)[0]["status"] == "sending"
+
+
+def test_a_failed_push_superseded_by_a_newer_edit_leaves_one_pending_row(c):
+    jid = make_job(c)
+    repo.enqueue_notion(c, jid)
+    row = repo.claim_outbox(c)
+    repo.update_job(c, jid, notes="newer")       # queues its own pending row while the first is being sent
+    repo.outbox_fail(c, row["id"], "boom")       # going back to pending would make two pending rows for one job
+    assert [(r["op"], r["status"]) for r in outbox(c)] == [("upsert", "pending")]
+
+
+def test_a_push_cut_off_by_a_crash_is_sent_again(c):
+    jid = make_job(c)
+    repo.enqueue_notion(c, jid)
+    repo.claim_outbox(c)                         # the app stops here, mid-push
+    with c.cursor() as cur:
+        cur.execute("UPDATE notion_outbox SET claimed_at = now() - interval '1 hour'")
+    c.commit()
+    again = repo.claim_outbox(c)
+    assert again is not None and str(again["job_id"]) == jid
+    assert [r["status"] for r in outbox(c)] == ["sending"]
+
+
+def test_retrying_failed_pushes_folds_into_a_newer_pending_one(c):
+    jid = make_job(c)
+    repo.enqueue_notion(c, jid)
+    oid = repo.claim_outbox(c)["id"]
+    repo.outbox_fail(c, oid, "boom", max_attempts=1)  # parked as failed
+    repo.update_job(c, jid, notes="later edit")        # a new pending row for the same job
+    assert repo.retry_failed_outbox(c) == 0             # the pending row already covers it; no unique-index clash
+    assert [(r["op"], r["status"]) for r in outbox(c)] == [("upsert", "pending")]
+
+
 # ───────────────────────────── notion payloads and drift ─────────────────────────────
 def test_rich_text_is_chunked_under_the_2000_char_limit():
     parts = notion_sync.rich_text("x" * 4500)
@@ -1246,3 +1315,86 @@ def test_suggestions_come_from_applied_jobs_and_are_empty_without_any(api, paste
     make_job(pasted, url="https://x.example/s/1", ref="S1")
     got = api.get("/api/boards/suggestions").json()
     assert [o["value"] for o in got["location_include"]["top"]] == ["Pune"]                     # make_job's location
+
+
+# ───────────────────────────── a save that lost a race to another request ─────────────────────────────
+def _posting(url, ref=None):
+    from jobtracker.models import Posting
+
+    return Posting(ats="greenhouse", url=url, title="Backend Engineer", company="Acme", job_ref=ref,
+                   description_html="<h3>Responsibilities</h3><ul><li>Build payment services</li></ul>", raw={})
+
+
+def test_a_posting_saved_by_another_request_after_the_duplicate_check_is_a_duplicate(pasted):
+    """Two adds of one link both pass ingest's duplicate check. The second save is what store_posting then sees:
+    it must answer 'duplicate', not fail on the unique index."""
+    import asyncio
+
+    from jobtracker import pipeline
+
+    url = "https://boards.greenhouse.io/acme/jobs/7"
+    first = asyncio.run(pipeline.store_posting(_posting(url), canonical=url, snapshot="{}", llm=NoLLM()))
+    late = asyncio.run(pipeline.store_posting(_posting(url), canonical=url, snapshot="{}", llm=NoLLM()))
+    assert first.status == "created"
+    assert (late.status, late.job_id) == ("duplicate", first.job_id) and late.message.startswith("already tracked")
+    assert pasted.execute("SELECT count(*) AS n FROM jobs").fetchone()["n"] == 1  # and the connection is still usable
+
+
+def test_the_same_requisition_saved_in_between_is_a_duplicate(pasted, monkeypatch):
+    import asyncio
+
+    from jobtracker import pipeline
+
+    a, b = "https://boards.greenhouse.io/acme/jobs/8", "https://acme.example/careers/backend-engineer"
+    first = asyncio.run(pipeline.store_posting(_posting(a, "REQ-1"), canonical=a, snapshot="{}", llm=NoLLM()))
+    monkeypatch.setattr(repo, "find_job_by_ref", lambda c, cid, ref: None)  # its check ran before the other save committed
+    late = asyncio.run(pipeline.store_posting(_posting(b, "REQ-1"), canonical=b, snapshot="{}", llm=NoLLM()))
+    assert (late.status, late.job_id) == ("duplicate", first.job_id) and late.message.startswith("same requisition")
+
+
+# ───────────────────────────── adding a waiting posting from the Inbox ─────────────────────────────
+def _waiting(c):
+    repo.record_poll(c, board(c, title_include=["backend"]), [lp(1)])  # a title filter announces matches at once
+    return str(c.execute("SELECT id FROM discovered_postings").fetchone()["id"])
+
+
+def _add_returns(monkeypatch, outcome):
+    from jobtracker import pipeline
+
+    async def ingest(url, **kw):
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
+
+    monkeypatch.setattr(pipeline, "ingest", ingest)
+
+
+@pytest.mark.parametrize("outcome, code", [
+    ("needs_text", 422),   # the site blocks automated access: you are asked to paste the text instead
+    ("failed", 422),
+    ("error", 500),        # a bug or a database error half-way
+])
+def test_a_waiting_posting_that_could_not_be_added_stays_waiting_as_it_was(pasted, monkeypatch, outcome, code):
+    from fastapi.testclient import TestClient
+
+    from jobtracker import pipeline
+    from jobtracker.web import app as webapp
+
+    did = _waiting(pasted)
+    repo.mark_all_seen(pasted)
+    _add_returns(monkeypatch, RuntimeError("adapter bug") if outcome == "error" else pipeline.IngestResult(outcome, "nope"))
+    r = TestClient(webapp.app, raise_server_exceptions=False).post(f"/api/discovered/{did}/add")
+    assert r.status_code == code
+    assert states(pasted) == {"1": "seen"}                              # still in the Inbox, and still 'seen'
+    assert repo.purge_discovered(pasted) == {"added": 0, "closed": 0}   # nothing for the nightly clean-up to drop
+
+
+def test_a_waiting_posting_that_was_added_is_linked_to_its_job(api, pasted, monkeypatch):
+    from jobtracker import pipeline
+
+    did = _waiting(pasted)
+    jid = make_job(pasted, url="https://boards.greenhouse.io/acme/jobs/1", ref="GH1")
+    _add_returns(monkeypatch, pipeline.IngestResult("created", "Backend Engineer @ Acme", jid))
+    assert api.post(f"/api/discovered/{did}/add").status_code == 200
+    row = pasted.execute("SELECT state, job_id::text AS job_id FROM discovered_postings").fetchone()
+    assert (row["state"], row["job_id"]) == ("added", jid)

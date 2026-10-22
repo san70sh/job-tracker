@@ -477,11 +477,38 @@ def enqueue_notion(c: psycopg.Connection, job_id: str) -> None:
     c.commit()
 
 
+OUTBOX_STALE_MINUTES = 15  # a row still 'sending' after this was cut off (a push, every retry included, takes a few minutes)
+_HAS_PENDING_TWIN = """EXISTS (SELECT 1 FROM notion_outbox p WHERE p.job_id = notion_outbox.job_id AND p.op = 'upsert'
+                                 AND p.status = 'pending' AND p.id <> notion_outbox.id)"""
+
+
 def due_outbox(c: psycopg.Connection, limit: int = 50) -> list[dict]:
     with c.cursor() as cur:
         cur.execute("SELECT id, job_id, notion_page_id, op, attempts FROM notion_outbox "
                     "WHERE status = 'pending' AND next_attempt_at <= now() ORDER BY id LIMIT %s", (limit,))
         return cur.fetchall()
+
+
+def claim_outbox(c: psycopg.Connection) -> dict | None:
+    """Take the next due row and mark it 'sending'. While it is sent, an edit to the job queues a new pending row
+    instead of folding into this one, so the edit is pushed too. SKIP LOCKED: two runs never take the same row."""
+    with c.cursor() as cur:
+        # pushes cut off by a crash: an upsert is queued again (unless a newer one already is), an archive goes back
+        cur.execute(
+            """WITH stale AS (DELETE FROM notion_outbox WHERE status = 'sending' AND op = 'upsert'
+                                AND claimed_at < now() - make_interval(mins => %(mins)s) RETURNING job_id)
+               INSERT INTO notion_outbox (job_id, op) SELECT DISTINCT job_id, 'upsert' FROM stale WHERE job_id IS NOT NULL
+               ON CONFLICT (job_id) WHERE op = 'upsert' AND status = 'pending' DO NOTHING""", {"mins": OUTBOX_STALE_MINUTES})
+        cur.execute("UPDATE notion_outbox SET status = 'pending' WHERE status = 'sending' AND op = 'archive' "
+                    "AND claimed_at < now() - make_interval(mins => %s)", (OUTBOX_STALE_MINUTES,))
+        cur.execute(
+            """UPDATE notion_outbox SET status = 'sending', claimed_at = now()
+               WHERE id = (SELECT id FROM notion_outbox WHERE status = 'pending' AND next_attempt_at <= now()
+                           ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED)
+               RETURNING id, job_id, notion_page_id, op, attempts""")
+        row = cur.fetchone()
+    c.commit()
+    return row
 
 
 def outbox_done(c: psycopg.Connection, outbox_id: int) -> None:
@@ -491,15 +518,18 @@ def outbox_done(c: psycopg.Connection, outbox_id: int) -> None:
 
 
 def outbox_fail(c: psycopg.Connection, outbox_id: int, error: str, max_attempts: int = 8) -> None:
-    """Back off 2, 4, 8 ... minutes (capped at 60). After max_attempts the row is parked as 'failed' and shown in the UI."""
+    """Back off 2, 4, 8 ... minutes (capped at 60). After max_attempts the row is parked as 'failed' and shown in the UI.
+    A failed upsert whose job was edited during the push is dropped: the newer pending row sends the job as it is now."""
     with c.cursor() as cur:
-        cur.execute(
-            """UPDATE notion_outbox SET attempts = attempts + 1, last_error = %s,
-                   status = CASE WHEN attempts + 1 >= %s THEN 'failed' ELSE 'pending' END,
-                   next_attempt_at = now() + make_interval(mins => LEAST(60, power(2, attempts + 1)::int))
-               WHERE id = %s""",
-            (error[:500], max_attempts, outbox_id),
-        )
+        cur.execute(f"DELETE FROM notion_outbox WHERE id = %s AND op = 'upsert' AND {_HAS_PENDING_TWIN}", (outbox_id,))
+        if cur.rowcount == 0:
+            cur.execute(
+                """UPDATE notion_outbox SET attempts = attempts + 1, last_error = %s,
+                       status = CASE WHEN attempts + 1 >= %s THEN 'failed' ELSE 'pending' END,
+                       next_attempt_at = now() + make_interval(mins => LEAST(60, power(2, attempts + 1)::int))
+                   WHERE id = %s""",
+                (error[:500], max_attempts, outbox_id),
+            )
     c.commit()
 
 
@@ -511,11 +541,15 @@ def outbox_status(c: psycopg.Connection) -> dict:
         err = cur.fetchone()
         cur.execute("DELETE FROM notion_outbox WHERE status = 'done' AND done_at < now() - interval '7 days'")
     c.commit()
-    return {"pending": counts.get("pending", 0), "failed": counts.get("failed", 0), "last_error": err["last_error"] if err else None}
+    return {"pending": counts.get("pending", 0) + counts.get("sending", 0), "failed": counts.get("failed", 0),
+            "last_error": err["last_error"] if err else None}
 
 
 def retry_failed_outbox(c: psycopg.Connection) -> int:
     with c.cursor() as cur:
+        # a job edited since its push failed already has a pending row: making this one pending too would break the
+        # one-pending-push-per-job index
+        cur.execute(f"DELETE FROM notion_outbox WHERE status = 'failed' AND op = 'upsert' AND {_HAS_PENDING_TWIN}")
         cur.execute("UPDATE notion_outbox SET status = 'pending', attempts = 0, next_attempt_at = now() WHERE status = 'failed'")
         n = cur.rowcount
     c.commit()
@@ -910,6 +944,12 @@ def pending_summary(c: psycopg.Connection, overdue_days: int) -> dict:
         r = cur.fetchone()
     return {"new": r["new"], "seen": r["seen"], "pending": r["new"] + r["seen"], "overdue": r["overdue"],
             "oldest_days": r["oldest_days"], "overdue_after_days": overdue_days}
+
+
+def get_discovered(c: psycopg.Connection, disc_id: str) -> dict | None:
+    with c.cursor() as cur:
+        cur.execute("SELECT id, url, title, state FROM discovered_postings WHERE id = %s", (disc_id,))
+        return cur.fetchone()
 
 
 def set_discovered_state(c: psycopg.Connection, disc_id: str, state: str, job_id: str | None = None) -> dict | None:
