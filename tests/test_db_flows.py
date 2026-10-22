@@ -779,6 +779,76 @@ def test_editing_filters_moves_waiting_postings_in_and_out_of_the_inbox(c):
     assert states(c)["3"] == "seen"                                        # back in the Inbox, quietly
 
 
+def test_a_title_in_both_the_include_and_exclude_lists_never_reaches_the_inbox(c):
+    from jobtracker import boards
+
+    bid, _ = _gh(c, "Acme", "acme", title_include=["senior", "engineering"], title_exclude=["architect", "director"])
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1, "Senior Engineering Director"), lp(2, "SENIOR ENGINEER"),
+                                                    lp(3, "Senior Software Architect, Engineering")]))
+    assert states(c) == {"1": "filtered", "2": "new", "3": "filtered"}                    # only the one with no excluded word gets in
+    boards.update(c, bid, {"title_exclude": []})                                          # drop the exclusions: both come back
+    assert states(c) == {"1": "seen", "2": "new", "3": "seen"}
+    boards.update(c, bid, {"title_exclude": ["Director"]})                                # a different case than the title, same result
+    assert states(c) == {"1": "filtered", "2": "new", "3": "seen"}
+
+
+def test_a_reopened_posting_is_judged_by_the_filters_not_just_made_visible(c):
+    bid, _ = _gh(c, "Acme", "acme", title_exclude=["director"])
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1, "Backend Engineer")]))                    # first check: silent baseline
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1, "Backend Engineer"), lp(2, "Director, Growth"), lp(3, "Backend Developer")]))
+    assert states(c) == {"1": "baseline", "2": "filtered", "3": "new"}
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(9, "Platform Engineer")]))                   # 1, 2 and 3 leave the board
+    assert states(c) == {"1": "closed", "2": "closed", "3": "closed", "9": "new"}
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1, "Backend Engineer"), lp(2, "Director, Growth"), lp(3, "Backend Developer"),
+                                                    lp(9, "Platform Engineer")]))                  # ...and come back
+    assert states(c) == {"1": "seen", "2": "filtered", "3": "seen", "9": "new"}                    # the Director stays out of the Inbox
+
+
+def test_a_reopened_baseline_posting_that_the_filters_exclude_stays_out_of_the_inbox(c):
+    bid, _ = _gh(c, "Acme", "acme")                                                                # no filter yet: everything is baseline
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1, "Director, Strategy"), lp(2, "Backend Engineer")]))
+    assert states(c) == {"1": "baseline", "2": "baseline"}
+    from jobtracker import boards
+
+    boards.update(c, bid, {"title_exclude": ["director"]})                                        # baseline rows are left alone by an edit
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(5, "Backend Engineer")]))
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1, "Director, Strategy"), lp(2, "Backend Engineer"), lp(5, "Backend Engineer")]))
+    assert states(c)["1"] == "filtered" and states(c)["2"] == "seen"
+
+
+def test_a_reopened_posting_outside_the_experience_range_stays_filtered(c):
+    bid, _ = _gh(c, "Acme", "acme", experience_min=3, experience_max=6)
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1)]))
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1), _exp(2, 8, None, "read"), _exp(3, 4, 5, "read")]))
+    assert states(c)["2"] == "filtered" and states(c)["3"] == "new"
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1)]))
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1), _exp(2), _exp(3)]))                      # the years were read when first stored
+    assert states(c)["2"] == "filtered" and states(c)["3"] == "seen"
+
+
+def test_a_deleted_job_returns_to_the_inbox_unless_the_filters_now_exclude_it(c):
+    from jobtracker import boards
+
+    bid, _ = _gh(c, "Acme", "acme")
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1)]))
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1), lp(2, "Backend Engineer"), lp(3, "Backend Engineering Manager")]))
+    with c.cursor() as cur:
+        cur.execute("SELECT id, ats_posting_id FROM discovered_postings WHERE ats_posting_id IN ('2', '3')")
+        ids = {r["ats_posting_id"]: str(r["id"]) for r in cur.fetchall()}
+    jobs = {}
+    for n, url in (("2", "https://boards.greenhouse.io/acme/jobs/2"), ("3", "https://boards.greenhouse.io/acme/jobs/3")):
+        jobs[n] = make_job(c, url=url, ref=f"R{n}")
+        repo.set_discovered_state(c, ids[n], "added")
+        with c.cursor() as cur:
+            cur.execute("UPDATE discovered_postings SET job_id = %s WHERE id = %s", (jobs[n], ids[n]))
+        c.commit()
+    boards.update(c, bid, {"title_exclude": ["manager"]})                                         # edited while both are 'added'
+    assert states(c)["2"] == "added" and states(c)["3"] == "added"
+    repo.delete_job(c, jobs["2"])
+    repo.delete_job(c, jobs["3"])
+    assert states(c)["2"] == "seen" and states(c)["3"] == "filtered"
+
+
 def _exp(i, lo=None, hi=None, state=None, title="Backend Engineer"):
     from jobtracker.models import ListedPosting
 
