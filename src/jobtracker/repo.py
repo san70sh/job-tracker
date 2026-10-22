@@ -946,6 +946,12 @@ def pending_summary(c: psycopg.Connection, overdue_days: int) -> dict:
             "oldest_days": r["oldest_days"], "overdue_after_days": overdue_days}
 
 
+def get_discovered(c: psycopg.Connection, disc_id: str) -> dict | None:
+    with c.cursor() as cur:
+        cur.execute("SELECT id, url, title, state FROM discovered_postings WHERE id = %s", (disc_id,))
+        return cur.fetchone()
+
+
 def set_discovered_state(c: psycopg.Connection, disc_id: str, state: str, job_id: str | None = None) -> dict | None:
     if state not in ("new", "seen", "added", "not_interested"):
         raise ValueError(f"cannot set state {state!r} by hand")

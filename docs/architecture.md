@@ -150,8 +150,8 @@ stateDiagram-v2
   [*] --> filtered: fails title or location filter
   [*] --> new: appears on a later check
   new --> seen: Mark all seen
-  new --> added: Add to tracker
-  seen --> added: Add to tracker
+  new --> added: Add to tracker (once saved as a job)
+  seen --> added: Add to tracker (once saved as a job)
   new --> not_interested
   seen --> not_interested
   baseline --> closed: left the board

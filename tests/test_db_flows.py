@@ -1351,3 +1351,50 @@ def test_the_same_requisition_saved_in_between_is_a_duplicate(pasted, monkeypatc
     late = asyncio.run(pipeline.store_posting(_posting(b, "REQ-1"), canonical=b, snapshot="{}", llm=NoLLM()))
     assert (late.status, late.job_id) == ("duplicate", first.job_id) and late.message.startswith("same requisition")
 
+
+# ───────────────────────────── adding a waiting posting from the Inbox ─────────────────────────────
+def _waiting(c):
+    repo.record_poll(c, board(c, title_include=["backend"]), [lp(1)])  # a title filter announces matches at once
+    return str(c.execute("SELECT id FROM discovered_postings").fetchone()["id"])
+
+
+def _add_returns(monkeypatch, outcome):
+    from jobtracker import pipeline
+
+    async def ingest(url, **kw):
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
+
+    monkeypatch.setattr(pipeline, "ingest", ingest)
+
+
+@pytest.mark.parametrize("outcome, code", [
+    ("needs_text", 422),   # the site blocks automated access: you are asked to paste the text instead
+    ("failed", 422),
+    ("error", 500),        # a bug or a database error half-way
+])
+def test_a_waiting_posting_that_could_not_be_added_stays_waiting_as_it_was(pasted, monkeypatch, outcome, code):
+    from fastapi.testclient import TestClient
+
+    from jobtracker import pipeline
+    from jobtracker.web import app as webapp
+
+    did = _waiting(pasted)
+    repo.mark_all_seen(pasted)
+    _add_returns(monkeypatch, RuntimeError("adapter bug") if outcome == "error" else pipeline.IngestResult(outcome, "nope"))
+    r = TestClient(webapp.app, raise_server_exceptions=False).post(f"/api/discovered/{did}/add")
+    assert r.status_code == code
+    assert states(pasted) == {"1": "seen"}                              # still in the Inbox, and still 'seen'
+    assert repo.purge_discovered(pasted) == {"added": 0, "closed": 0}   # nothing for the nightly clean-up to drop
+
+
+def test_a_waiting_posting_that_was_added_is_linked_to_its_job(api, pasted, monkeypatch):
+    from jobtracker import pipeline
+
+    did = _waiting(pasted)
+    jid = make_job(pasted, url="https://boards.greenhouse.io/acme/jobs/1", ref="GH1")
+    _add_returns(monkeypatch, pipeline.IngestResult("created", "Backend Engineer @ Acme", jid))
+    assert api.post(f"/api/discovered/{did}/add").status_code == 200
+    row = pasted.execute("SELECT state, job_id::text AS job_id FROM discovered_postings").fetchone()
+    assert (row["state"], row["job_id"]) == ("added", jid)

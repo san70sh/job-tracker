@@ -391,15 +391,15 @@ def api_discovered_summary():
 
 @app.post("/api/discovered/{disc_id}/add")
 async def add_discovered(disc_id: str):
-    row = await asyncio.to_thread(lambda: _with(repo.set_discovered_state, disc_id, "added"))
+    """The posting leaves the Inbox only once it is a job: if it cannot be saved (the site needs a login, an error) it
+    stays as it was, rather than hidden as 'added' with no job and then purged."""
+    row = await asyncio.to_thread(lambda: _with(repo.get_discovered, disc_id))
     if not row:
         raise HTTPException(404)
     res = await pipeline.ingest(row["url"])
-    if res.job_id:
+    if res.job_id:  # created, or a duplicate of a job already tracked
         await asyncio.to_thread(lambda: _with(repo.set_discovered_state, disc_id, "added", res.job_id))
-    elif res.status == "failed":
-        await asyncio.to_thread(lambda: _with(repo.set_discovered_state, disc_id, "new"))
-    return JSONResponse(res.as_dict(), status_code=200 if res.status != "failed" else 422)
+    return JSONResponse(res.as_dict(), status_code=200 if res.status not in ("failed", "needs_text") else 422)
 
 
 @app.post("/api/discovered/{disc_id}/not-interested")
