@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlsplit
 
+import psycopg
+
 from . import PARSER_VERSION, db, portals, repo
 from .adapters import registry
 from .adapters.base import NeedsFallback, Target
@@ -164,12 +166,27 @@ async def store_posting(posting: Posting, *, canonical: str, snapshot: str, stag
         ref_dup = repo.find_job_by_ref(c, cid, ex.get("job_ref"))
         if ref_dup:
             return IngestResult("duplicate", f"same requisition already tracked: {ref_dup['role']}", str(ref_dup["id"]))
-        jid = repo.save_job(c, ex, canonical=canonical, company_id=cid, snapshot_body=snapshot,
-                            parser_version=PARSER_VERSION, salary=salary, needs_review=needs_review, stage=stage,
-                            llm_call_ids=llm_ids)
+        try:
+            jid = repo.save_job(c, ex, canonical=canonical, company_id=cid, snapshot_body=snapshot,
+                                parser_version=PARSER_VERSION, salary=salary, needs_review=needs_review, stage=stage,
+                                llm_call_ids=llm_ids)
+        except psycopg.errors.UniqueViolation as e:  # another request saved the same posting after this one checked
+            c.rollback()
+            return _saved_meanwhile(c, e, canonical, company, ex.get("job_ref"))
         return IngestResult("created", f"{ex.get('role')} @ {company}", jid, needs_review, missing, posting.ats, list(review))
 
     return await _db(persist)
+
+
+def _saved_meanwhile(c, e: psycopg.errors.UniqueViolation, canonical: str, company: str, job_ref: str | None) -> IngestResult:
+    """The job a lost race clashed with, as a duplicate. Any other clash is not a duplicate posting: raised again."""
+    if e.diag.constraint_name == "jobs_company_ref_uq" and job_ref:
+        dup, why = repo.find_job_by_company_ref(c, company, job_ref), "same requisition already tracked"
+    else:
+        dup, why = repo.find_job_by_url(c, canonical), "already tracked"
+    if dup is None:
+        raise e
+    return IngestResult("duplicate", f"{why}: {dup['role']}", str(dup["id"]))
 
 
 # ───────────────────────────── pasted text and captured pages ─────────────────────────────

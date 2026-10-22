@@ -1315,3 +1315,39 @@ def test_suggestions_come_from_applied_jobs_and_are_empty_without_any(api, paste
     make_job(pasted, url="https://x.example/s/1", ref="S1")
     got = api.get("/api/boards/suggestions").json()
     assert [o["value"] for o in got["location_include"]["top"]] == ["Pune"]                     # make_job's location
+
+
+# ───────────────────────────── a save that lost a race to another request ─────────────────────────────
+def _posting(url, ref=None):
+    from jobtracker.models import Posting
+
+    return Posting(ats="greenhouse", url=url, title="Backend Engineer", company="Acme", job_ref=ref,
+                   description_html="<h3>Responsibilities</h3><ul><li>Build payment services</li></ul>", raw={})
+
+
+def test_a_posting_saved_by_another_request_after_the_duplicate_check_is_a_duplicate(pasted):
+    """Two adds of one link both pass ingest's duplicate check. The second save is what store_posting then sees:
+    it must answer 'duplicate', not fail on the unique index."""
+    import asyncio
+
+    from jobtracker import pipeline
+
+    url = "https://boards.greenhouse.io/acme/jobs/7"
+    first = asyncio.run(pipeline.store_posting(_posting(url), canonical=url, snapshot="{}", llm=NoLLM()))
+    late = asyncio.run(pipeline.store_posting(_posting(url), canonical=url, snapshot="{}", llm=NoLLM()))
+    assert first.status == "created"
+    assert (late.status, late.job_id) == ("duplicate", first.job_id) and late.message.startswith("already tracked")
+    assert pasted.execute("SELECT count(*) AS n FROM jobs").fetchone()["n"] == 1  # and the connection is still usable
+
+
+def test_the_same_requisition_saved_in_between_is_a_duplicate(pasted, monkeypatch):
+    import asyncio
+
+    from jobtracker import pipeline
+
+    a, b = "https://boards.greenhouse.io/acme/jobs/8", "https://acme.example/careers/backend-engineer"
+    first = asyncio.run(pipeline.store_posting(_posting(a, "REQ-1"), canonical=a, snapshot="{}", llm=NoLLM()))
+    monkeypatch.setattr(repo, "find_job_by_ref", lambda c, cid, ref: None)  # its check ran before the other save committed
+    late = asyncio.run(pipeline.store_posting(_posting(b, "REQ-1"), canonical=b, snapshot="{}", llm=NoLLM()))
+    assert (late.status, late.job_id) == ("duplicate", first.job_id) and late.message.startswith("same requisition")
+
