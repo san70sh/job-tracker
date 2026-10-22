@@ -438,6 +438,10 @@ class BoardPatch(BaseModel):
     enabled: bool | None = None
 
 
+class BoardsPatch(BaseModel):
+    enabled: bool  # Pause all (false) / Resume all (true)
+
+
 class BoardPreview(BaseModel):
     board_id: int | None = None  # an existing board, with the filters below tried in place of its saved ones
     url: str | None = None  # or a board not added yet
@@ -509,6 +513,12 @@ async def add_board(body: NewBoard):
         raise HTTPException(503, f"The database does not know {adapter.ats} yet. Run scripts/db.ps1 apply, then try again.")
     return {"id": bid, "company": company, "ats": adapter.ats, "created": created,
             "found_by": None if found.how == portals.BY_ADDRESS else found.how}  # set only when the page had to be read
+
+
+@app.patch("/api/boards")
+def patch_all_boards(body: BoardsPatch):
+    """Pause or resume every board at once; `changed` counts the boards that were not already that way."""
+    return {"ok": True, "changed": _with(repo.set_all_boards_enabled, body.enabled)}
 
 
 @app.patch("/api/boards/{board_id}")

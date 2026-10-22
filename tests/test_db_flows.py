@@ -992,6 +992,102 @@ def test_pausing_through_the_api_and_checking_one_paused_board_by_hand(pasted, m
     assert api.patch(f"/api/boards/{bid}", json={"enabled": True}).json()["changed"] == ["enabled"]
 
 
+def _enabled(c):
+    return {b["id"]: b["enabled"] for b in repo.list_boards(c)}
+
+
+def test_pause_all_and_resume_all_count_only_the_boards_that_change(c):
+    from jobtracker import boards
+
+    a, _ = _gh(c, "A", "a")
+    b, _ = _gh(c, "B", "b")
+    already, _ = _gh(c, "Already", "already")
+    boards.update(c, already, {"enabled": False})
+    assert repo.set_all_boards_enabled(c, False) == 2                     # the one paused by hand is not counted
+    assert _enabled(c) == {a: False, b: False, already: False}
+    assert repo.set_all_boards_enabled(c, False) == 0                     # again: nothing left to pause
+    assert repo.set_all_boards_enabled(c, True) == 3
+    assert _enabled(c) == {a: True, b: True, already: True}
+    assert repo.set_all_boards_enabled(c, True) == 0
+
+
+def test_pause_all_with_no_boards_does_nothing(c):
+    assert repo.set_all_boards_enabled(c, False) == 0
+    assert repo.set_all_boards_enabled(c, True) == 0
+    assert repo.list_boards(c) == []
+
+
+def test_pause_all_keeps_filters_interval_postings_and_last_check(c):
+    bid, _ = _gh(c, "Acme", "acme", title_exclude=["director"], experience_min=3, experience_max=6)
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1)]))
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1), lp(2, "Backend Developer"), lp(3, "Director, Growth")]))
+    before, postings = _row(c, bid), states(c)
+    repo.set_all_boards_enabled(c, False)
+    after = _row(c, bid)
+    assert after["enabled"] is False
+    assert {k: v for k, v in after.items() if k != "enabled"} == {k: v for k, v in before.items() if k != "enabled"}
+    assert states(c) == postings                                          # nothing leaves or enters the Inbox
+    repo.set_all_boards_enabled(c, True)
+    assert _row(c, bid) == before
+
+
+def test_pause_all_stops_every_bulk_check_until_resume_all(pasted, monkeypatch):
+    import asyncio
+
+    from jobtracker import watcher
+
+    c = pasted
+    ids = {_gh(c, n, n.lower())[0] for n in ("One", "Two", "Three")}
+    checked = []
+
+    async def fake_poll_board(row, f):
+        checked.append(row["id"])
+        return []
+
+    monkeypatch.setattr(watcher, "poll_board", fake_poll_board)
+    repo.set_all_boards_enabled(c, False)
+    asyncio.run(watcher.poll_due(f=object(), force=False))                # the scheduled check (never checked: all due)
+    asyncio.run(watcher.poll_due(f=object(), force=True))                 # "check all now"
+    assert checked == []
+    repo.set_all_boards_enabled(c, True)
+    asyncio.run(watcher.poll_due(f=object(), force=True))
+    assert set(checked) == ids and len(checked) == 3
+
+
+def test_pause_all_and_resume_all_through_the_api(pasted, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from jobtracker import watcher
+    from jobtracker.web import app as webapp
+
+    api = TestClient(webapp.app)
+    a, _ = _gh(pasted, "A", "a")
+    b, _ = _gh(pasted, "B", "b")
+    assert api.patch("/api/boards", json={"enabled": False}).json() == {"ok": True, "changed": 2}
+    assert {x["id"]: x["enabled"] for x in api.get("/api/boards").json()} == {a: False, b: False}
+    seen = []
+
+    async def fake_poll_board(row, f):
+        seen.append(row["id"])
+        return []
+
+    monkeypatch.setattr(watcher, "poll_board", fake_poll_board)
+    assert api.post(f"/api/boards/{a}/poll").json() == {"new": 0} and seen == [a]  # Check now on one board still works
+    assert api.patch("/api/boards", json={"enabled": True}).json() == {"ok": True, "changed": 2}
+    assert {x["id"]: x["enabled"] for x in api.get("/api/boards").json()} == {a: True, b: True}
+
+
+@pytest.mark.parametrize("body", [None, {}, {"enabled": None}, {"enabled": "maybe"}, {"enabled": [True]}])
+def test_pause_all_needs_a_true_or_false(pasted, body):
+    from fastapi.testclient import TestClient
+
+    from jobtracker.web import app as webapp
+
+    bid, _ = _gh(pasted, "Solo", "solo")
+    assert TestClient(webapp.app).patch("/api/boards", json=body).status_code == 422
+    assert _enabled(pasted) == {bid: True}                                # nothing changed
+
+
 def test_board_edits_are_validated(c):
     from jobtracker import boards
 

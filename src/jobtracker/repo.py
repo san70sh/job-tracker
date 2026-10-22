@@ -738,6 +738,16 @@ def update_board(c: psycopg.Connection, board_id: int, changes: dict[str, Any]) 
     c.commit()
 
 
+def set_all_boards_enabled(c: psycopg.Connection, enabled: bool) -> int:
+    """Pause all / Resume all. Returns how many boards changed; nothing else about a board (filters, postings,
+    last check) is touched, and pausing does not refilter the Inbox."""
+    with c.cursor() as cur:
+        cur.execute("UPDATE watched_boards SET enabled = %s WHERE enabled <> %s", (enabled, enabled))
+        n = cur.rowcount
+    c.commit()
+    return n
+
+
 def rename_company(c: psycopg.Connection, company_id: str, new_name: str) -> int:
     """Rename a company everywhere. If another company already has that name this one is merged into it.
     Returns how many saved jobs carry the name; their Notion pages are queued to follow."""
