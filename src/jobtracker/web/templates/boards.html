@@ -19,6 +19,7 @@
   .form-grid label, .jv-scroll .f label { display:block; font-size:12px; color:var(--muted); margin:8px 0 3px; }
   .pv { margin-top:10px; font-size:14px; } .pv ul { margin:4px 0 0 18px; padding:0; } .pv .muted { font-size:12px; }
   .paused { opacity:.6; }
+  .bulk { display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-bottom:6px; } .bulk[hidden] { display:none; }
   .exp { display:flex; gap:8px; align-items:center; } .exp input { width:84px; } .exp span { color:var(--muted); font-size:13px; }
   @media (max-width:900px) { table.boards { table-layout:auto; } .c-filters { display:none; } }
 {% endblock %}
@@ -37,6 +38,7 @@
     <div class="pv" id="b-pv"></div>
   </form>
 </div>
+<div class="bulk" id="bulk" hidden><span class="muted" id="bulk-count"></span><button class="ghost" id="bulk-toggle"></button></div>
 <table class="boards"><thead><tr><th class="c-company">Company</th><th class="c-source">Source</th><th class="c-filters">Filters</th><th class="c-status">Status</th><th class="c-act"></th></tr></thead><tbody id="rows"></tbody></table>
 {% endblock %}
 {% block js %}
@@ -125,7 +127,23 @@ window.reload = async function () {
     <td class="c-status">${statusCell(b)}</td>
     <td class="c-act"><div class="acts"><button class="ghost" data-edit="${b.id}">Edit</button><button class="ghost" data-pause="${b.id}" title="${b.enabled ? "Stop checking this board until you resume it" : "Start checking this board again"}">${b.enabled ? "Pause" : "Resume"}</button><button class="ghost" data-check="${b.id}">Check now</button><button class="danger" data-del="${b.id}">Remove</button></div></td></tr>`).join("")
     || '<tr><td colspan="5" class="muted">No boards yet.</td></tr>';
+  // Pause all while any board is active; Resume all once every board is paused
+  const paused = BOARDS.filter(b => !b.enabled).length, anyActive = paused < BOARDS.length;
+  $("#bulk").hidden = !BOARDS.length;
+  $("#bulk-count").textContent = `${BOARDS.length} board${BOARDS.length === 1 ? "" : "s"}${paused ? ` · ${paused} paused` : ""}`;
+  Object.assign($("#bulk-toggle"), {disabled: false, textContent: anyActive ? "Pause all" : "Resume all",
+    title: anyActive ? "Stop checking every board until you resume them" : "Start checking every board again"});
 };
+$("#bulk-toggle").addEventListener("click", async e => {
+  const enabled = e.target.textContent === "Resume all";
+  e.target.disabled = true;
+  try {
+    const r = await api("/api/boards", {method: "PATCH", body: {enabled}});
+    const n = `${r.changed} board${r.changed === 1 ? "" : "s"}`;
+    toast(enabled ? `Resumed ${n}` : `Paused ${n}: none is checked until you resume it`);
+  } catch (err) { toast(esc(err.message), "err"); }
+  window.reload();
+});
 $("#rows").addEventListener("click", async e => {
   const b = e.target.closest("button"); if (!b) return;
   if (b.dataset.edit) return editBoard(+b.dataset.edit);

@@ -7,7 +7,15 @@ from jobtracker import filters, suggestions
 @pytest.mark.parametrize("term,text,hit", [
     ("java", "Senior Java Developer", True),
     ("JAVA", "senior java developer", True),                   # any case
-    ("java", "JavaScript Engineer", False),                    # whole words only
+    ("java", "JavaScript Engineer", True),                     # a term matches from the start of a word (prefix)
+    ("intern", "Software Engineering Internship", True),
+    ("manager", "Engineering Managers", True),
+    ("director", "Senior Director, Strategy", True),
+    ("director", "Co-Director", True),                         # punctuation starts a new word
+    ("intern", "International Sales", True),                   # the price of prefix matching: use /\\bintern\\b/ to avoid it
+    ("/\\bintern\\b/", "International Sales", False),            # a /regex/ is matched exactly as written
+    ("tern", "Software Intern", False),                        # but never from the middle of a word
+    ("director", "Subdirector", False),
     ("software engineer", "Senior Software Engineer II", True),  # a phrase
     ("c++", "C++ Developer", True),                            # symbols are literal, not regex
     ("/java|kotlin/", "Kotlin Backend Engineer", True),        # /regex/ is the advanced form
@@ -24,6 +32,7 @@ def test_title_terms(term, text, hit):
     ("Pune", "Punekar Nagar", False),
     ("Gurugram", "Gurgaon", True),
     ("Reading", "Reading, UK", True),                          # not a known city: plain word
+    ("India", "Indiana, USA", False),                          # a place is still a whole word: prefix matching is for titles
 ])
 def test_location_terms_know_city_spellings(term, place, hit):
     assert filters.any_match(place, [term], location=True) is hit
@@ -37,6 +46,21 @@ def test_passes_combines_the_three_filters():
     assert not f("Backend Intern", "Pune", i=["backend"], e=["intern"])    # an exclusion wins
     assert not f("Backend Engineer", "Leeds", i=["backend"], l=["Pune"])   # wrong place
     assert not f("Backend Engineer", None, l=["Pune"])                     # unknown place cannot match a place filter
+
+
+@pytest.mark.parametrize("title,include,exclude", [
+    ("Senior Director, Engineering", ["senior", "engineering"], ["director"]),            # matches both lists
+    ("Senior Director, Engineering", ["senior", "engineering"], ["DIRECTOR"]),            # exclusion case differs
+    ("SENIOR DIRECTOR, ENGINEERING", ["Senior"], ["director"]),                           # title case differs
+    ("Senior Director, Engineering", ["director"], ["director"]),                          # the very same term in both
+    ("Senior Director, Engineering", ["senior"], ["architect", "analyst", "director"]),   # one of several exclusions is enough
+    ("Senior Director, Engineering", ["senior"], ["director", "architect", "analyst"]),   # ...wherever it is in the list
+    ("Backend Engineering Managers", ["backend"], ["manager"]),                           # a prefix hit on the exclusion counts too
+    ("Senior Staff Engineer", ["/senior/"], ["/staff|principal/"]),                       # and so does a /regex/
+])
+def test_a_title_matching_both_lists_is_excluded(title, include, exclude):
+    assert filters.any_match(title, include) and filters.any_match(title, exclude)       # the premise: it is in both
+    assert not filters.passes(title, "Pune", include, exclude, ["Pune"])
 
 
 def test_validate_names_the_bad_term():

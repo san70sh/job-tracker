@@ -779,6 +779,76 @@ def test_editing_filters_moves_waiting_postings_in_and_out_of_the_inbox(c):
     assert states(c)["3"] == "seen"                                        # back in the Inbox, quietly
 
 
+def test_a_title_in_both_the_include_and_exclude_lists_never_reaches_the_inbox(c):
+    from jobtracker import boards
+
+    bid, _ = _gh(c, "Acme", "acme", title_include=["senior", "engineering"], title_exclude=["architect", "director"])
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1, "Senior Engineering Director"), lp(2, "SENIOR ENGINEER"),
+                                                    lp(3, "Senior Software Architect, Engineering")]))
+    assert states(c) == {"1": "filtered", "2": "new", "3": "filtered"}                    # only the one with no excluded word gets in
+    boards.update(c, bid, {"title_exclude": []})                                          # drop the exclusions: both come back
+    assert states(c) == {"1": "seen", "2": "new", "3": "seen"}
+    boards.update(c, bid, {"title_exclude": ["Director"]})                                # a different case than the title, same result
+    assert states(c) == {"1": "filtered", "2": "new", "3": "seen"}
+
+
+def test_a_reopened_posting_is_judged_by_the_filters_not_just_made_visible(c):
+    bid, _ = _gh(c, "Acme", "acme", title_exclude=["director"])
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1, "Backend Engineer")]))                    # first check: silent baseline
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1, "Backend Engineer"), lp(2, "Director, Growth"), lp(3, "Backend Developer")]))
+    assert states(c) == {"1": "baseline", "2": "filtered", "3": "new"}
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(9, "Platform Engineer")]))                   # 1, 2 and 3 leave the board
+    assert states(c) == {"1": "closed", "2": "closed", "3": "closed", "9": "new"}
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1, "Backend Engineer"), lp(2, "Director, Growth"), lp(3, "Backend Developer"),
+                                                    lp(9, "Platform Engineer")]))                  # ...and come back
+    assert states(c) == {"1": "seen", "2": "filtered", "3": "seen", "9": "new"}                    # the Director stays out of the Inbox
+
+
+def test_a_reopened_baseline_posting_that_the_filters_exclude_stays_out_of_the_inbox(c):
+    bid, _ = _gh(c, "Acme", "acme")                                                                # no filter yet: everything is baseline
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1, "Director, Strategy"), lp(2, "Backend Engineer")]))
+    assert states(c) == {"1": "baseline", "2": "baseline"}
+    from jobtracker import boards
+
+    boards.update(c, bid, {"title_exclude": ["director"]})                                        # baseline rows are left alone by an edit
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(5, "Backend Engineer")]))
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1, "Director, Strategy"), lp(2, "Backend Engineer"), lp(5, "Backend Engineer")]))
+    assert states(c)["1"] == "filtered" and states(c)["2"] == "seen"
+
+
+def test_a_reopened_posting_outside_the_experience_range_stays_filtered(c):
+    bid, _ = _gh(c, "Acme", "acme", experience_min=3, experience_max=6)
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1)]))
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1), _exp(2, 8, None, "read"), _exp(3, 4, 5, "read")]))
+    assert states(c)["2"] == "filtered" and states(c)["3"] == "new"
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1)]))
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1), _exp(2), _exp(3)]))                      # the years were read when first stored
+    assert states(c)["2"] == "filtered" and states(c)["3"] == "seen"
+
+
+def test_a_deleted_job_returns_to_the_inbox_unless_the_filters_now_exclude_it(c):
+    from jobtracker import boards
+
+    bid, _ = _gh(c, "Acme", "acme")
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1)]))
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1), lp(2, "Backend Engineer"), lp(3, "Backend Engineering Manager")]))
+    with c.cursor() as cur:
+        cur.execute("SELECT id, ats_posting_id FROM discovered_postings WHERE ats_posting_id IN ('2', '3')")
+        ids = {r["ats_posting_id"]: str(r["id"]) for r in cur.fetchall()}
+    jobs = {}
+    for n, url in (("2", "https://boards.greenhouse.io/acme/jobs/2"), ("3", "https://boards.greenhouse.io/acme/jobs/3")):
+        jobs[n] = make_job(c, url=url, ref=f"R{n}")
+        repo.set_discovered_state(c, ids[n], "added")
+        with c.cursor() as cur:
+            cur.execute("UPDATE discovered_postings SET job_id = %s WHERE id = %s", (jobs[n], ids[n]))
+        c.commit()
+    boards.update(c, bid, {"title_exclude": ["manager"]})                                         # edited while both are 'added'
+    assert states(c)["2"] == "added" and states(c)["3"] == "added"
+    repo.delete_job(c, jobs["2"])
+    repo.delete_job(c, jobs["3"])
+    assert states(c)["2"] == "seen" and states(c)["3"] == "filtered"
+
+
 def _exp(i, lo=None, hi=None, state=None, title="Backend Engineer"):
     from jobtracker.models import ListedPosting
 
@@ -920,6 +990,102 @@ def test_pausing_through_the_api_and_checking_one_paused_board_by_hand(pasted, m
     monkeypatch.setattr(watcher, "poll_board", fake_poll_board)
     assert api.post(f"/api/boards/{bid}/poll").json() == {"new": 0} and seen == [bid]  # asking for this one board is explicit
     assert api.patch(f"/api/boards/{bid}", json={"enabled": True}).json()["changed"] == ["enabled"]
+
+
+def _enabled(c):
+    return {b["id"]: b["enabled"] for b in repo.list_boards(c)}
+
+
+def test_pause_all_and_resume_all_count_only_the_boards_that_change(c):
+    from jobtracker import boards
+
+    a, _ = _gh(c, "A", "a")
+    b, _ = _gh(c, "B", "b")
+    already, _ = _gh(c, "Already", "already")
+    boards.update(c, already, {"enabled": False})
+    assert repo.set_all_boards_enabled(c, False) == 2                     # the one paused by hand is not counted
+    assert _enabled(c) == {a: False, b: False, already: False}
+    assert repo.set_all_boards_enabled(c, False) == 0                     # again: nothing left to pause
+    assert repo.set_all_boards_enabled(c, True) == 3
+    assert _enabled(c) == {a: True, b: True, already: True}
+    assert repo.set_all_boards_enabled(c, True) == 0
+
+
+def test_pause_all_with_no_boards_does_nothing(c):
+    assert repo.set_all_boards_enabled(c, False) == 0
+    assert repo.set_all_boards_enabled(c, True) == 0
+    assert repo.list_boards(c) == []
+
+
+def test_pause_all_keeps_filters_interval_postings_and_last_check(c):
+    bid, _ = _gh(c, "Acme", "acme", title_exclude=["director"], experience_min=3, experience_max=6)
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1)]))
+    repo.record_poll(c, _row(c, bid), ListedBatch([lp(1), lp(2, "Backend Developer"), lp(3, "Director, Growth")]))
+    before, postings = _row(c, bid), states(c)
+    repo.set_all_boards_enabled(c, False)
+    after = _row(c, bid)
+    assert after["enabled"] is False
+    assert {k: v for k, v in after.items() if k != "enabled"} == {k: v for k, v in before.items() if k != "enabled"}
+    assert states(c) == postings                                          # nothing leaves or enters the Inbox
+    repo.set_all_boards_enabled(c, True)
+    assert _row(c, bid) == before
+
+
+def test_pause_all_stops_every_bulk_check_until_resume_all(pasted, monkeypatch):
+    import asyncio
+
+    from jobtracker import watcher
+
+    c = pasted
+    ids = {_gh(c, n, n.lower())[0] for n in ("One", "Two", "Three")}
+    checked = []
+
+    async def fake_poll_board(row, f):
+        checked.append(row["id"])
+        return []
+
+    monkeypatch.setattr(watcher, "poll_board", fake_poll_board)
+    repo.set_all_boards_enabled(c, False)
+    asyncio.run(watcher.poll_due(f=object(), force=False))                # the scheduled check (never checked: all due)
+    asyncio.run(watcher.poll_due(f=object(), force=True))                 # "check all now"
+    assert checked == []
+    repo.set_all_boards_enabled(c, True)
+    asyncio.run(watcher.poll_due(f=object(), force=True))
+    assert set(checked) == ids and len(checked) == 3
+
+
+def test_pause_all_and_resume_all_through_the_api(pasted, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from jobtracker import watcher
+    from jobtracker.web import app as webapp
+
+    api = TestClient(webapp.app)
+    a, _ = _gh(pasted, "A", "a")
+    b, _ = _gh(pasted, "B", "b")
+    assert api.patch("/api/boards", json={"enabled": False}).json() == {"ok": True, "changed": 2}
+    assert {x["id"]: x["enabled"] for x in api.get("/api/boards").json()} == {a: False, b: False}
+    seen = []
+
+    async def fake_poll_board(row, f):
+        seen.append(row["id"])
+        return []
+
+    monkeypatch.setattr(watcher, "poll_board", fake_poll_board)
+    assert api.post(f"/api/boards/{a}/poll").json() == {"new": 0} and seen == [a]  # Check now on one board still works
+    assert api.patch("/api/boards", json={"enabled": True}).json() == {"ok": True, "changed": 2}
+    assert {x["id"]: x["enabled"] for x in api.get("/api/boards").json()} == {a: True, b: True}
+
+
+@pytest.mark.parametrize("body", [None, {}, {"enabled": None}, {"enabled": "maybe"}, {"enabled": [True]}])
+def test_pause_all_needs_a_true_or_false(pasted, body):
+    from fastapi.testclient import TestClient
+
+    from jobtracker.web import app as webapp
+
+    bid, _ = _gh(pasted, "Solo", "solo")
+    assert TestClient(webapp.app).patch("/api/boards", json=body).status_code == 422
+    assert _enabled(pasted) == {bid: True}                                # nothing changed
 
 
 def test_board_edits_are_validated(c):

@@ -1,6 +1,8 @@
 """Board filter terms. One reading of a term, used by the watcher, the preview and the Workday office filter.
 
-A term is plain words (matched as whole words, any case); wrap it in slashes for a regular expression: /java|kotlin/.
+A title term is plain words matched from the start of a word, in any case, so "intern" also finds Internship and "manager"
+finds Managers. A location term must match a whole word (Pune does not find Punekar). Wrap a term in slashes for a regular
+expression, which is matched as written: /java|kotlin/, or /\\bintern\\b/ for the exact word.
 A location term that names a known city also matches that city's other spellings (Bengaluru ~ Bangalore).
 """
 from __future__ import annotations
@@ -35,7 +37,8 @@ def compile_term(term: str, location: bool = False) -> re.Pattern[str]:
     if is_regex(t):
         return re.compile(t[1:-1], re.I)
     words = _spellings(t) if location else [t]
-    return re.compile(_WORD_EDGE[0] + "(?:" + "|".join(re.escape(w) for w in words) + ")" + _WORD_EDGE[1], re.I)
+    tail = _WORD_EDGE[1] if location else ""  # a title term may stop mid-word (prefix); a place must be the whole word
+    return re.compile(_WORD_EDGE[0] + "(?:" + "|".join(re.escape(w) for w in words) + ")" + tail, re.I)
 
 
 def validate(terms: Iterable[str]) -> None:
@@ -57,6 +60,13 @@ def board_keeps(board, p, max_age_days: int) -> bool:
     """What a board's filters can judge from the listing alone: title words, place and age (not the years of experience)."""
     return (passes(p.title, p.location, board["title_include"], board["title_exclude"], board["location_include"])
             and is_recent(p.posted_at, max_age_days))
+
+
+def keeps_stored(board, title: str, place: str | None, exp_min: float | None, exp_max: float | None) -> bool:
+    """Do a board's title, place and experience filters keep a posting already stored? (Age is not judged: a stored
+    posting is never hidden for having waited.) Used wherever a stored posting changes state outside a poll."""
+    return (passes(title, place, board["title_include"], board["title_exclude"], board["location_include"])
+            and experience_fits(exp_min, exp_max, board["experience_min"], board["experience_max"]))
 
 
 def experience_fits(found_min: float | None, found_max: float | None, want_min: float | None, want_max: float | None) -> bool:

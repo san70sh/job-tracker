@@ -445,8 +445,13 @@ def delete_job(c: psycopg.Connection, job_id: str) -> None:
     with c.cursor() as cur:
         cur.execute("SELECT notion_page_id FROM jobs WHERE id = %s", (job_id,))
         row = cur.fetchone()
-        # a posting that was added and then deleted goes back to being undecided
-        cur.execute("UPDATE discovered_postings SET state = 'seen', job_id = NULL WHERE job_id = %s", (job_id,))
+        # a posting that was added and then deleted goes back to being undecided, unless the filters (edited since) now drop it
+        cur.execute("SELECT d.id, d.title, d.location, d.experience_min AS found_min, d.experience_max AS found_max, "
+                    "b.title_include, b.title_exclude, b.location_include, b.experience_min, b.experience_max "
+                    "FROM discovered_postings d JOIN watched_boards b ON b.id = d.board_id WHERE d.job_id = %s", (job_id,))
+        for p in cur.fetchall():
+            kept = filters.keeps_stored(p, p["title"], p["location"], p["found_min"], p["found_max"])
+            cur.execute("UPDATE discovered_postings SET state = %s, job_id = NULL WHERE id = %s", ("seen" if kept else "filtered", p["id"]))
         cur.execute("DELETE FROM jobs WHERE id = %s", (job_id,))
         if row and row["notion_page_id"]:  # the job row is gone, so the outbox carries the page id itself
             cur.execute("INSERT INTO notion_outbox (op, notion_page_id) VALUES ('archive', %s)", (row["notion_page_id"],))
@@ -733,6 +738,16 @@ def update_board(c: psycopg.Connection, board_id: int, changes: dict[str, Any]) 
     c.commit()
 
 
+def set_all_boards_enabled(c: psycopg.Connection, enabled: bool) -> int:
+    """Pause all / Resume all. Returns how many boards changed; nothing else about a board (filters, postings,
+    last check) is touched, and pausing does not refilter the Inbox."""
+    with c.cursor() as cur:
+        cur.execute("UPDATE watched_boards SET enabled = %s WHERE enabled <> %s", (enabled, enabled))
+        n = cur.rowcount
+    c.commit()
+    return n
+
+
 def rename_company(c: psycopg.Connection, company_id: str, new_name: str) -> int:
     """Rename a company everywhere. If another company already has that name this one is merged into it.
     Returns how many saved jobs carry the name; their Notion pages are queued to follow."""
@@ -767,8 +782,7 @@ def refilter_pending(c: psycopg.Connection, board_id: int) -> dict[str, int]:
                     "WHERE board_id = %s AND state IN ('new', 'seen', 'filtered')", (board_id,))
         max_age = board_options.max_age_days()
         for r in cur.fetchall():
-            ok = (filters.passes(r["title"], r["location"], f["title_include"], f["title_exclude"], f["location_include"])
-                  and filters.experience_fits(r["experience_min"], r["experience_max"], f["experience_min"], f["experience_max"]))
+            ok = filters.keeps_stored(f, r["title"], r["location"], r["experience_min"], r["experience_max"])
             if ok and r["state"] == "filtered" and filters.is_recent(r["posted_at"], max_age):
                 cur.execute("UPDATE discovered_postings SET state = 'seen' WHERE id = %s", (r["id"],))
                 moved["restored"] += 1
@@ -818,11 +832,15 @@ def record_poll(c: psycopg.Connection, board: dict, listed: list[ListedPosting])
     seen_ids = [p.ats_posting_id for p in listed]
     with c.cursor() as cur:
         for p in listed:
-            cur.execute("SELECT id FROM discovered_postings WHERE board_id = %s AND ats_posting_id = %s", (board["id"], p.ats_posting_id))
+            cur.execute("SELECT id, state, experience_min, experience_max FROM discovered_postings "
+                        "WHERE board_id = %s AND ats_posting_id = %s", (board["id"], p.ats_posting_id))
             existing = cur.fetchone()
             if existing:
-                cur.execute("UPDATE discovered_postings SET last_seen_at = now(), "
-                            "state = CASE WHEN state = 'closed' THEN 'seen' ELSE state END WHERE id = %s", (existing["id"],))
+                state = existing["state"]
+                if state == "closed":  # back on the board: visible again only if the filters still keep it
+                    kept = filters.keeps_stored(board, p.title, p.location, existing["experience_min"], existing["experience_max"])
+                    state = "seen" if kept else "filtered"
+                cur.execute("UPDATE discovered_postings SET last_seen_at = now(), state = %s WHERE id = %s", (state, existing["id"]))
                 continue
             if p.experience_state == EXP_DEFERRED:
                 continue
